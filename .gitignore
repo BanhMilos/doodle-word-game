@@ -1,0 +1,29 @@
+# Dependencies
+*/node_modules  
+
+# Environment Variables
+.env  
+.env.* 
+!.env.example
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build Artifacts
+/build
+/dist
+/out
+
+# Testing
+/coverage
+
+# System Files
+.DS_Store  # macOS metadata file
+Thumbs.db  # Windows metadata file
+
+# IDE and Editor Configurations
+.vscode/
+.idea/
+*.iml
