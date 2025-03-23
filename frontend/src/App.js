@@ -1,9 +1,9 @@
 import logo from "./logo.svg";
 import "./App.css";
 import CreateRoom from "./test/CreateRoom";
-import JoinRoom from "./test/JoinRoom";
 import { useState } from "react";
 import socket from "./utils/socket";
+import JoinRoom from "./test/JoinRoom";
 
 function App() {
   const [isJoin, setIsJoin] = useState(false);

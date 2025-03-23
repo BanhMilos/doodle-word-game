@@ -1,49 +1,57 @@
 import mongoose from "mongoose";
+import Player from "./playerModel";
 
-const roomSchema = mongoose.Schema({
-    word: {
-        type: String,
-        default: ""
+const roomSchema = mongoose.Schema(
+  {
+    roomId: {
+      type: String,
+      required: true,
+      unique: true,
     },
     name: {
-        type: String,
-        required: true,
-        unique: true,
-        trim: true
+      type: String,
+      trim: true,
     },
+    players: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Player",
+      },
+    ],
     occupancy: {
-        type: Number,
-        required: true,
-        default: 4
+      type: Number,
+      default: 2,
     },
     maxRound: {
-        type: Number,
-        required: true,
-        default: 1
+      type: Number,
+      default: 1,
     },
-    currentRound: {
-        type: Number,
-        required: true,
-        default: 1
+    wordsUsed: [
+      {
+        type: String,
+      },
+    ],
+    wordsCount: {
+      type: Number,
+      default: 1,
     },
-    players:[{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Player'
-    }],
-    isJoin: {
-        type: Boolean,
-        default: true
+    drawTime: {
+      type: Number,
+      default: 80,
     },
-    turn: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Player'
+    drawings: [
+      {
+        type: String,
+      },
+    ],
+    createdAt: {
+      type: Date,
+      default: Date.now,
     },
-    turnIndex: {
-        type: Number,
-        default: 0
-    }
-},{timestamps: true})
+  },
+  { timestamps: true }
+);
 
-const Room = mongoose.model('Room', roomSchema)
+const Room = mongoose.model("Room", roomSchema);
 
-export default Room
+export default Room;
