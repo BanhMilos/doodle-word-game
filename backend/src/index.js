@@ -4,9 +4,8 @@ import { Server } from "socket.io";
 import cors from "cors";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
-import user_route from "./routes/UserRoute.js";
-import Room from "./models/roomModel.js";
-import Player from "./models/playerModel.js";
+import { createRoom, joinRoom } from "./controllers/roomController.js";
+import { disconnect } from "./controllers/connectionController.js";
 
 dotenv.config();
 
@@ -39,83 +38,15 @@ app.use("/", user_route);
 io.on("connection", (socket) => {
   console.log(`⚡ A user connected: ${socket.id}`);
 
-  socket.on("disconnect", async () => {
-    const player = await Player.findOne({ socketID: socket.id });
-    const rooms = await Room.find({ players: player._id });
+  // Connection
+  socket.on("disconnect",() => disconnect(socket,io));
 
-    for (const room of rooms) {
-      // Xoá player khỏi room
-      room.players.pull(player._id);
-      await room.save();
+  // Room
+  socket.on("create_room", (data) => createRoom(data, socket));
+  socket.on("join_room", (data) => joinRoom(data, socket, io));
 
-      // Nếu sau khi xóa room trống, xóa room
-      if (room.players.length === 0) {
-        await room.deleteOne();
-        console.log(`🗑️ Room ${room._id} deleted because it's empty.`);
-      } else {
-        console.log(`✅ Player removed from room ${room._id}`);
-      }
-    }
-    await player.deleteOne();
-    console.log(`❌ User disconnected: ${socket.id}`);
-  });
-  socket.on("create_room", async ({ username, roomName, size, rounds }) => {
-    try {
-      const roomExists = await Room.findOne({ name: roomName });
-      if (roomExists) {
-        socket.emit("room_exists", { message: "Room already exists" });
-        return;
-      }
-      const roomData = new Room({
-        name: roomName,
-        occupancy: size,
-        maxRound: rounds,
-      });
-      const player = new Player({
-        name: username,
-        socketID: socket.id,
-        isPartyLeader: true,
-      });
-      roomData.players.push(player);
-      await roomData.save();
-      await player.save();
-      socket.join(roomName);
-      io.to(roomName).emit("updateRoom", { roomData });
-    } catch (error) {
-      console.log(error);
-    }
-  });
-
-  socket.on("join_room", async ({ username, roomName }) => {
-    try {
-      const roomData = await Room.findOne({ name: roomName });
-      if (!roomData) {
-        socket.emit("room_not_found", { message: "Room not found" });
-        return;
-      }
-      if (roomData.isJoin) {
-        const player = new Player({
-          name: username,
-          socketID: socket.id,
-          isPartyLeader: false,
-        });
-        roomData.players.push(player);
-        await player.save();
-        socket.join(roomName);
-        if (roomData.players.length === roomData.occupancy) {
-          roomData.isJoin = false;
-        }
-        roomData.turn = roomData.players[roomData.turnIndex];
-        await roomData.save();
-        const updatedRoom = await Room.findById(roomData._id).populate('players');
-        io.to(roomName).emit("updateRoom", { roomData: updatedRoom });
-      } else {
-        socket.emit("room_full", { message: "Room is full" });
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  });
+  // Game
+  socket.on("paint",({details, roomName}) => io.to(roomName).emit("paint", details));
 });
 
 const PORT = process.env.PORT || 5000;

@@ -1,20 +1,25 @@
 import mongoose from "mongoose";
 
 const playerSchema = mongoose.Schema({
-    name:{
+    username:{
         type: String,
         required: true,
         trim: true
     },
     socketID: {
         type: String,
-        required: true
+        required: true,
+        trim: true
     },
-    isPartyLeader: {
-        type: Boolean,
-        default: false
+    joinedAt: {
+        type: Date,
+        default: Date.now
     },
-    scores: {
+    highestScore: {
+        type: Number,
+        default: 0
+    },
+    totalGames: {
         type: Number,
         default: 0
     }

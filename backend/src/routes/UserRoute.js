@@ -19,8 +19,6 @@ user_route.use(
     secret: process.env.SESSION_SECRET,
   })
 );
-user_route.set("view engine", "ejs");
-user_route.set("views", path.join(__dirname, "./src/views"));
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
