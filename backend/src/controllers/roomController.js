@@ -10,6 +10,7 @@ export const createRoom = async ({
   maxRound,
   wordsCount,
   drawTime,
+  hints,
 },socket) => {
   try {
     let player = await Player.findOne({ username });
@@ -29,11 +30,16 @@ export const createRoom = async ({
       players: [player._id],
       drawings: [],
       wordsUsed: [],
+      round: 1,
+      turn: 0,
+      currentPlayerIndex: 0,
+      currentWord: "",
       name: roomName,
       occupancy,
       maxRound,
       wordsCount,
       drawTime,
+      hints,
       isJoin: true,
       createdAt: Date.now(),
     };
