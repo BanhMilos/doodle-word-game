@@ -8,6 +8,7 @@ import { createRoom, joinRoom } from "./controllers/roomController.js";
 import { disconnect } from "./controllers/connectionController.js";
 import { sendChatToAll } from "./controllers/chatController.js";
 import { chooseWord, setWord, startTurn } from "./controllers/gameController.js";
+import user_route from "./routes/userRoute.js";
 
 dotenv.config();
 

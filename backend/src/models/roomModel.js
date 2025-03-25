@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import Player from "./playerModel";
+import Player from "./playerModel.js";
 
 const roomSchema = mongoose.Schema(
   {
