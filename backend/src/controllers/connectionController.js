@@ -1,3 +1,4 @@
+import { type } from "os";
 import Player from "../models/playerModel.js";
 import Room from "../models/roomModel.js";
 export const disconnect = async (socket,io) => {
@@ -12,8 +13,9 @@ export const disconnect = async (socket,io) => {
       roomData.isJoin = true;
       const score = roomData.players[index].score;
       roomData.players.splice(index, 1);
+      roomData.currentPlayerIndex -= 1;
       await redis.set(key, JSON.stringify(roomData));
-      io.to(roomData.roomId).emit("playerLeft", { username });
+      io.to(roomData.roomId).emit("chatMessage", { username, type: "left", message: `${player.username} left the room` });
       console.log(`👋 ${player.username} left room ${roomData.roomId}`);
 
       // Tinh diem cho nguoi choi

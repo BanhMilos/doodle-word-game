@@ -1,6 +1,6 @@
 export const sendChatToAll = async ({ username, message, roomId }, io) => {
     try {
-        io.to(roomId).emit("send_chat", { username, message });
+        io.to(roomId).emit("chatMessage", { username, message, type: "message" });
     } catch (error) {
         console.log(error);
     }
