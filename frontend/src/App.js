@@ -29,10 +29,14 @@ function App() {
     // </div>
     // Mượn chỗ này test backend nhé ae
 
-    <>
-      <CreateRoom socket={socket} setIsJoin={setIsJoin} isJoin={isJoin} />
-      <JoinRoom socket={socket} setIsJoin={setIsJoin} isJoin={isJoin} />
-    </>
+    <div className="app-container">
+      <div>
+        <img src="../assets/gifs/gf_logo.gif" alt="Nothing here" />
+      </div>
+      <div className="panel">
+        There's nothing here
+      </div>
+    </div>
   );
 }
 
