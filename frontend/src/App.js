@@ -25,10 +25,14 @@ function App() {
     //   </header>
     // </div>
 
-    <>
-      {/* <Login />
-      <Register /> */}
-    </>
+    <div className="app-container">
+      <div>
+        <img src="../assets/gifs/gf_logo.gif" alt="Nothing here" />
+      </div>
+      <div className="panel">
+        There's nothing here
+      </div>
+    </div>
   );
 }
 
