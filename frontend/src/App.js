@@ -1,12 +1,9 @@
-import logo from "./logo.svg";
 import "./App.css";
-import CreateRoom from "./test/CreateRoom";
-import { useState } from "react";
 import socket from "./utils/socket";
-import JoinRoom from "./test/JoinRoom";
+import Login from "./test/Login";
+import Register from "./test/Register";
 
 function App() {
-  const [isJoin, setIsJoin] = useState(false);
   socket.on("connect", (data) => {
     console.log("Connected to server" + data);
   });
@@ -27,11 +24,10 @@ function App() {
     //     </a>
     //   </header>
     // </div>
-    // Mượn chỗ này test backend nhé ae
 
     <>
-      <CreateRoom socket={socket} setIsJoin={setIsJoin} isJoin={isJoin} />
-      <JoinRoom socket={socket} setIsJoin={setIsJoin} isJoin={isJoin} />
+      <Login />
+      <Register />
     </>
   );
 }

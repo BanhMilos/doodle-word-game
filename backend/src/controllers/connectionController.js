@@ -1,7 +1,7 @@
-import { type } from "os";
+import redis from "../config/redis.js";
 import Player from "../models/playerModel.js";
 import Room from "../models/roomModel.js";
-export const disconnect = async (socket,io) => {
+const disconnect = async (socket,io) => {
   console.log(`❌ Player disconnected: ${socket.id}`);
   let player = await Player.findOne({ socketID: socket.id });
   const keys = await redis.keys("room:*");
@@ -48,3 +48,5 @@ export const disconnect = async (socket,io) => {
     }
   }
 };
+
+export default { disconnect };

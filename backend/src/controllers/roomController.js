@@ -3,7 +3,7 @@ import Room from "../models/roomModel.js";
 import { v4 as uuidv4 } from "uuid";
 import redis from "../config/redis.js";
 
-export const createRoom = async ({
+const createRoom = async ({
   username,
   roomName,
   occupancy,
@@ -52,7 +52,7 @@ export const createRoom = async ({
   }
 };
 
-export const joinRoom = async ({ username, roomId }, socket, io) => {
+const joinRoom = async ({ username, roomId }, socket, io) => {
   try {
     let player = await Player.findOne({ username });
     if (!player) {
@@ -82,3 +82,5 @@ export const joinRoom = async ({ username, roomId }, socket, io) => {
     console.log(error);
   }
 };
+
+export default { createRoom, joinRoom };
