@@ -62,10 +62,13 @@ io.on("connection", (socket) => {
   socket.on("joinRoom", (data) => roomController.joinRoom(data, socket, io));
 
   // Game
-  socket.on("startTurn", (data, io) => gameController.startTurn(data, io));
-  socket.on("chooseWord", (data) => gameController.chooseWord(data, socket));
-  socket.on("setWord", (data, io) => gameController.setWord(data, io));
+  socket.on("startTurn", (data) => gameController.startTurn(data, io));
+  socket.on("chooseWord", (data) => gameController.chooseWord(data, io));
+  socket.on("startGuessing", (data, io) => gameController.startGuessing(data, io));
+  socket.on("guessedCorrectly", (data) => gameController.guessedCorrectly(data, socket, io));
   socket.on("drawing", (data) => gameController.drawing(data, io));
+  socket.on("endTurn", (data) => gameController.endTurn(data, io));
+  socket.on("gameOver", (data) => gameController.gameOver(data, io));
 
   // Chat
   socket.on("chatMessage", (data) => chatController.sendChatToAll(data, io));

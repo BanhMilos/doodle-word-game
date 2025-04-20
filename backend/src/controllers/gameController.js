@@ -1,36 +1,65 @@
-import { generate } from "random-words";
-const startTurn = async ({ username, roomId }, io) => {
-    try {
-        io.to(roomId).emit("startTurn", { username });
-    } catch (error) {
-        console.log(error);
-    }
+import gameService from "../services/gameService.js";
+const startTurn = async (data, io) => {
+  try {
+    await gameService.startTurn(data, io);
+  } catch (error) {
+    console.log(error);
+    io.to(data.roomId).emit("error", { message: error.message });
+  }
 };
 
-const chooseWord = async ({ username, roomId }, socket) => {
-    try {
-        const numberOfWords = await redis.get(`room:${roomId}:wordsCount`); // Lấy số lượng từ từ Redis
-        const words = generate(numberOfWords); // Tạo danh sách các từ ngẫu nhiên
-        socket.emit("pick_a_word", {username, words });
-    } catch (error) {
-        console.log(error);
-    }
+const chooseWord = async (data, io) => {
+  try {
+    gameService.chooseWord(data, io);
+  } catch (error) {
+    console.log(error);
+    io.to(data.roomId).emit("error", { message: error.message });
+  }
 };
 
-const setWord = async ({ roomId, word }, io) => {
-    try {
-        io.to(roomId).emit("set_word", { word });
-    } catch (error) {
-        console.log(error);
-    }
+const startGuessing = async (data, io) => {
+  try {
+    gameService.startGuessing(data, io);
+  } catch (error) {
+    console.log(error);
+    io.to(data.roomId).emit("error", { message: error.message });
+  }
 };
 
-const drawing = async ({ username, roomId }, io) => {
-    try {
-        io.to(roomId).emit("drawing", { username });
-    } catch (error) {
-        console.log(error);
-    }
+const drawing = async (data, io) => {
+  try {
+    gameService.drawing(data, io);
+  } catch (error) {
+    console.log(error);
+    io.to(data.roomId).emit("error", { message: error.message });
+  }
 };
 
-export default { startTurn, chooseWord, setWord, drawing };
+const guessedCorrectly = async (data, io) => {
+  try {
+    gameService.guessedCorrectly(data, io);
+  } catch (error) {
+    console.log(error);
+    io.to(data.roomId).emit("error", { message: error.message });
+  }
+};
+
+const endTurn = async (data, io) => {
+  try {
+    gameService.endTurn(data, io);
+  } catch (error) {
+    console.log(error);
+    io.to(data.roomId).emit("error", { message: error.message });
+  }
+};
+
+const gameOver = async (data, io) => {
+  try {
+    gameService.gameOver(data, io);
+  } catch (error) {
+    console.log(error);
+    io.to(data.roomId).emit("error", { message: error.message });
+  }
+};
+
+export default { startTurn, chooseWord, startGuessing, drawing, guessedCorrectly, endTurn, gameOver };

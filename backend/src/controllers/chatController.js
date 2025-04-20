@@ -1,6 +1,7 @@
-const sendChatToAll = async ({ username, message, roomId }, io) => {
+import chatService from "../services/chatService.js";
+const sendChatToAll = async (data, io) => {
     try {
-        io.to(roomId).emit("chatMessage", { username, message, type: "message" });
+        await chatService.sendChatToAll(data, io);
     } catch (error) {
         console.log(error);
     }
