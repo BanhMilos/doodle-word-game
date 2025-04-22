@@ -1,3 +1,12 @@
 import io from "socket.io-client";
-const socket = io.connect("http://localhost:5000");
-export default socket 
+const createSocket = () => {
+  const token = localStorage.getItem("accessToken");
+  const socket = io("http://localhost:5000", {
+    transports: ["websocket"],
+    auth: {
+      token: token,
+    },
+  });
+  return socket;
+};
+export default createSocket;
