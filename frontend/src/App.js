@@ -4,6 +4,7 @@ import CreateRoom from "./test/CreateRoom";
 import { useState } from "react";
 import socket from "./utils/socket";
 import JoinRoom from "./test/JoinRoom";
+import DrawingBoard from "./components/DrawingBoard";
 
 function App() {
   const [isJoin, setIsJoin] = useState(false);
@@ -36,6 +37,7 @@ function App() {
       <div className="panel">
         There's nothing here
       </div>
+      <DrawingBoard />
     </div>
   );
 }
