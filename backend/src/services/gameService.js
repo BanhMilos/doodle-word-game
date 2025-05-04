@@ -75,8 +75,10 @@ const guessedCorrectly = async ({ username, roomId }, io) => {
 const endTurn = async ({ roomId, username, score }, io) => {
   let roomData = await redis.get(`room:${roomId}`);
   roomData = JSON.parse(roomData);
-  roomData.scores[username] = score;
+  if (roomData.scores[username]) roomData.scores[username] += score;
+  else roomData.scores[username] = score;
   await redis.set(`room:${roomId}`, JSON.stringify(roomData));
+  io.to(roomId).emit("endTurn", { username, score });
 };
 
 const gameOver = async ({ roomId, username, score }, io) => {
@@ -97,7 +99,9 @@ const gameOver = async ({ roomId, username, score }, io) => {
     await room.save();
     await redis.del(`room:${roomId}`);
   } else {
+    roomData.scores[username] += score;
     await redis.set(`room:${roomId}`, JSON.stringify(roomData));
+    io.to(roomId).emit("leaderboard", { scores: roomData.scores });
   }
 };
 
