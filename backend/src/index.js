@@ -33,7 +33,7 @@ db.once("open", () => {
 app.use(
   cors({
     origin: "*", 
-    methods: ["GET", "POST"], // Các phương thức HTTP cho phép
+    methods: ["GET", "POST", "PUT", "DELETE"], // Các phương thức HTTP cho phép
     allowedHeaders: ["Content-Type", "Authorization"], // Các headers cho phép
     credentials: true, // Cho phép gửi cookie và session
   })
