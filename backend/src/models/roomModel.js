@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import Player from "./playerModel.js";
 
 const roomSchema = mongoose.Schema(
   {
@@ -26,11 +25,10 @@ const roomSchema = mongoose.Schema(
       type: Number,
       default: 1,
     },
-    wordsUsed: [
-      {
-        type: String,
-      },
-    ],
+    turnsPerRound: {
+      type: Number,
+      default: 1,
+    },
     wordsCount: {
       type: Number,
       default: 1,
@@ -39,11 +37,6 @@ const roomSchema = mongoose.Schema(
       type: Number,
       default: 80,
     },
-    drawings: [
-      {
-        type: String,
-      },
-    ],
     createdAt: {
       type: Date,
       default: Date.now,
