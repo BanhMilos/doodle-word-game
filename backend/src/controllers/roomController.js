@@ -3,7 +3,7 @@ import Room from "../models/roomModel.js";
 import { v4 as uuidv4 } from "uuid";
 import redis from "../config/redis.js";
 
-export const createRoom = async ({
+const createRoom = async ({
   username,
   roomName,
   occupancy,
@@ -45,14 +45,14 @@ export const createRoom = async ({
     };
     await redis.set(`room:${roomId}`, JSON.stringify(roomData));
     socket.join(roomId);
-    socket.emit("roomCreated", { roomId });
+    socket.emit("chatMessage", { username, type: "create", message: `Room ${roomId} created by ${username}` });
     console.log(`🏠 Room ${roomId} created by ${username}`);
   } catch (error) {
     console.log(error);
   }
 };
 
-export const joinRoom = async ({ username, roomId }, socket, io) => {
+const joinRoom = async ({ username, roomId }, socket, io) => {
   try {
     let player = await Player.findOne({ username });
     if (!player) {
@@ -65,10 +65,10 @@ export const joinRoom = async ({ username, roomId }, socket, io) => {
     const roomKey = `room:${roomId}`;
     let roomData = await redis.get(roomKey);
     if (!roomData)
-      return socket.emit("room_not_found", { message: "Room not found" });
+      return socket.emit("roomNotFound", { message: "Room not found" });
 
     if (!roomData.isJoin)
-      return socket.emit("room_full", { message: "Room is full" });
+      return socket.emit("roomFull", { message: "Room is full" });
     roomData = JSON.parse(roomData);
     roomData.players.push(player._id);
     if (roomData.players.length === roomData.occupancy) {
@@ -76,9 +76,11 @@ export const joinRoom = async ({ username, roomId }, socket, io) => {
     }
     await redis.set(roomKey, JSON.stringify(roomData));
     socket.join(roomId);
-    io.to(roomId).emit("playerJoined", { username });
+    io.to(roomId).emit("chatMessage", { username, type: "join", message: `${username} joined the room` });
     console.log(`👤 ${username} joined room ${roomId}`);
   } catch (error) {
     console.log(error);
   }
 };
+
+export default { createRoom, joinRoom };

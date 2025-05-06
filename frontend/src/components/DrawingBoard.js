@@ -31,13 +31,27 @@ const colors = [
 const DrawingBoard = () => {
   const [lines, setLines] = useState([]);
   const [color, setColor] = useState("black");
+  const [fills, setFills] = useState([]);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [isCursorInside, setIsCursorInside] = useState(false);
   const isDrawing = useRef(false);
 
   const handleMouseDown = (e) => {
-    isDrawing.current = true;
     const pos = e.target.getStage().getPointerPosition();
+    if (e.evt.shiftKey) {
+      setFills([
+        ...fills,
+        {
+          x: pos.x,
+          y: pos.y,
+          color: color,
+          radius: 20,
+        },
+      ]);
+      return;
+    }
+
+    isDrawing.current = true;
     setLines([
       ...lines,
       {
@@ -105,6 +119,17 @@ const DrawingBoard = () => {
               tension={0.5}
               lineCap="round"
               globalCompositeOperation="source-over"
+            />
+          ))}
+          
+          {fills.map((fill, i) => (
+            <Circle
+              key={`fill-${i}`}
+              x={fill.x}
+              y={fill.y}
+              radius={fill.radius}
+              fill={fill.color}
+              listening={false}
             />
           ))}
 

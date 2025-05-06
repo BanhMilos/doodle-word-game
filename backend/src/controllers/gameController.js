@@ -1,13 +1,13 @@
 import { generate } from "random-words";
-export const startTurn = async ({ username, roomId }, io) => {
+const startTurn = async ({ username, roomId }, io) => {
     try {
-        io.to(roomId).emit("start_turn", { username });
+        io.to(roomId).emit("startTurn", { username });
     } catch (error) {
         console.log(error);
     }
 };
 
-export const chooseWord = async ({ username, roomId }, socket) => {
+const chooseWord = async ({ username, roomId }, socket) => {
     try {
         const numberOfWords = await redis.get(`room:${roomId}:wordsCount`); // Lấy số lượng từ từ Redis
         const words = generate(numberOfWords); // Tạo danh sách các từ ngẫu nhiên
@@ -17,10 +17,20 @@ export const chooseWord = async ({ username, roomId }, socket) => {
     }
 };
 
-export const setWord = async ({ roomId, word }, io) => {
+const setWord = async ({ roomId, word }, io) => {
     try {
         io.to(roomId).emit("set_word", { word });
     } catch (error) {
         console.log(error);
     }
 };
+
+const drawing = async ({ username, roomId }, io) => {
+    try {
+        io.to(roomId).emit("drawing", { username });
+    } catch (error) {
+        console.log(error);
+    }
+};
+
+export default { startTurn, chooseWord, setWord, drawing };
