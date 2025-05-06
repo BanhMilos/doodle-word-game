@@ -31,12 +31,6 @@ function App() {
     // Mượn chỗ này test backend nhé ae
 
     <div className="app-container">
-      <div>
-        <img src="../assets/gifs/gf_logo.gif" alt="Nothing here" />
-      </div>
-      <div className="panel">
-        There's nothing here
-      </div>
       <DrawingBoard />
     </div>
   );
