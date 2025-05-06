@@ -2,6 +2,7 @@ import "./App.css";
 import socket from "./utils/socket";
 import Login from "./test/Login";
 import Register from "./test/Register";
+import DrawingBoard from "./components/DrawingBoard";
 
 function App() {
   socket.on("connect", (data) => {
@@ -26,12 +27,7 @@ function App() {
     // </div>
 
     <div className="app-container">
-      <div>
-        <img src="../assets/gifs/gf_logo.gif" alt="Nothing here" />
-      </div>
-      <div className="panel">
-        There's nothing here
-      </div>
+      <DrawingBoard />
     </div>
   );
 }
