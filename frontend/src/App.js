@@ -1,13 +1,21 @@
 import "./App.css";
-import socket from "./utils/socket";
-import Login from "./test/Login";
-import Register from "./test/Register";
+import createSocket from "./utils/socket";
 import DrawingBoard from "./components/DrawingBoard";
+import { useEffect } from "react";
 
 function App() {
-  socket.on("connect", (data) => {
-    console.log("Connected to server" + data);
-  });
+  useEffect(() => {
+    const socket = createSocket();
+
+    socket.on("connect", () => {
+      console.log("Connected to server with ID:", socket.id);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
+
   return (
     // <div className="App">
     //   <header className="App-header">
