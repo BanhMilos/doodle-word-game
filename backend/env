@@ -1,7 +1,0 @@
-PORT=5000
-MONGO_URI="mongodb+srv://an8112004:149162536@swking.jafup.mongodb.net/doodle_word_game?retryWrites=true&w=majority&appName=swking"
-SESSION_SECRET="nonstopvinahouse2020"
-REDIS_HOST='redis-12731.c292.ap-southeast-1-1.ec2.redns.redis-cloud.com'
-REDIS_PORt=12731
-REDIS_USERNAME='default'
-REDIS_PASSWORD='06jFyQVoc3uiiF3s7vcKdENRNU2RE4Pc'
