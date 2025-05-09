@@ -79,7 +79,18 @@ const joinRoom = async ({ username, roomId }, socket, io) => {
     player.socketID = socket.id;
     await player.save();
   }
-
+  if (!roomId) {
+    const keys = await redis.keys("room:*");
+    for (const key of keys) {
+      const roomData = JSON.parse(await redis.get(key));
+      if (roomData.isJoin) {
+        roomId = roomData.roomId;
+        break;
+      }
+    }
+  }
+  if (!roomId)
+    return socket.emit("noRoomAvailable", { message: "All rooms are full" });
   const roomKey = `room:${roomId}`;
   let roomData = await redis.get(roomKey);
   if (!roomData)
