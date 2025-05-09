@@ -3,7 +3,7 @@
 }
 
 .app-container {
-  background-image: url('../assets/images/img_bg.png');
+  background-image: url('assets/images/img_bg.png');
   background-size: auto;
   background-position: center;
   min-height: 100vh;
