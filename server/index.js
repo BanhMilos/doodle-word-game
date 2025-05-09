@@ -19,18 +19,19 @@ let rooms = {};
 io.on("connection", (socket) => {
   console.log("User connected: ", socket.id);
 
-  socket.on("join_room", ({ username, avatar }) => {
-    const roomId = "default"; // for now, one room
-    socket.join(roomId);
+  socket.on("join_room", ({ username, avatar, roomId }) => {
+    const room = roomId || "default"; // Use provided roomId or default
+    socket.join(room);
 
-    if (!rooms[roomId]) rooms[roomId] = [];
+    if (!rooms[room]) rooms[room] = [];
 
-    rooms[roomId].push({ id: socket.id, username, avatar });
-    io.to(roomId).emit("update_players", rooms[roomId]);
+    rooms[room].push({ id: socket.id, username, avatar });
+    io.to(room).emit("update_players", rooms[room]);
+    socket.emit("room_joined", { roomId: room }); // Emit room ID to the client
   });
 
-  socket.on("send_message", ({ username, message }) => {
-    io.emit("receive_message", { username, message });
+  socket.on("send_message", ({ username, message, roomId }) => {
+    io.to(roomId || "default").emit("receive_message", { username, message });
   });
 
   socket.on("disconnect", () => {
