@@ -23,6 +23,7 @@ router.post("/", async (req, res) => {
     if (usedUsername) {
       return res.status(400).json({ error: "Username already in use!" });
     }
+    console.log(req.body);
     const newPlayer = await Player.create({ ...req.body, userId: req.user.id });
     return res.status(200).json(newPlayer);
   }

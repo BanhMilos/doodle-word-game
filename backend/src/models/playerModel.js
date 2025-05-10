@@ -8,7 +8,6 @@ const playerSchema = mongoose.Schema({
     },
     socketID: {
         type: String,
-        required: true,
         trim: true
     },
     joinedAt: {
