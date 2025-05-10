@@ -1,7 +1,7 @@
 import React, { useRef, useState } from "react";
 import { Stage, Layer, Line, Rect, Circle } from "react-konva";
 import AppColors from "core/constants/AppColors";
-import AppIcons from "core/constants/AppIcons";
+import AppImages from "core/constants/AppImages";
 
 const DrawingBoard = () => {
   const [lines, setLines] = useState([]);
@@ -204,7 +204,7 @@ const DrawingBoard = () => {
             }}
           >
             <img
-              src={AppIcons.Undo}
+              src={AppImages.Undo}
               alt="Undo"
               style={{ width: 36, height: 36 }}
             />
@@ -226,7 +226,7 @@ const DrawingBoard = () => {
             }}
           >
             <img
-              src={AppIcons.Clear}
+              src={AppImages.Clear}
               alt="Clear"
               style={{ width: 40, height: 40 }}
             />
