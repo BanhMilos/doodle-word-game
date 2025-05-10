@@ -1,43 +1,20 @@
-import "./App.css";
-import createSocket from "./utils/socket";
-import DrawingBoard from "./components/DrawingBoard";
-import { useEffect } from "react";
+import { Route, Routes } from "react-router-dom";
+import Home from "./pages/Home";
+import Game from "./pages/Game";
+import Lobby from "./pages/Lobby";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
 
 function App() {
-  useEffect(() => {
-    const socket = createSocket();
-
-    socket.on("connect", () => {
-      console.log("Connected to server with ID:", socket.id);
-    });
-
-    return () => {
-      socket.disconnect();
-    };
-  }, []);
-
   return (
-    // <div className="App">
-    //   <header className="App-header">
-    //     <img src={logo} className="App-logo" alt="logo" />
-    //     <p>
-    //       Edit <code>src/App.js</code> and save to reload.
-    //     </p>
-    //     <a
-    //       className="App-link"
-    //       href="https://reactjs.org"
-    //       target="_blank"
-    //       rel="noopener noreferrer"
-    //     >
-    //       Learn React
-    //     </a>
-    //   </header>
-    // </div>
-
-    <div className="app-container">
-      <DrawingBoard />
-    </div>
-  );
+    <Routes>
+      <Route path="/" element={<Home/>} />
+      <Route path="/game" element={<Game />} />
+      <Route path="/lobby" element={<Lobby />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register"element={<Register />} />
+    </Routes>
+  )
 }
 
 export default App;
