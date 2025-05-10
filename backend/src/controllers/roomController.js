@@ -21,4 +21,12 @@ const joinRoom = async (data, socket, io) => {
   }
 };
 
-export default { createRoom, joinRoom };
+const getRoomData = async (data, socket) => {
+  try {
+    await roomService.getRoomData(data, socket);
+  } catch (error) {
+    console.log(error);
+    socket.emit("error", { message: "Error getting room data" });
+  }
+}
+export default { createRoom, joinRoom, getRoomData };
