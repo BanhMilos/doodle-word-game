@@ -62,4 +62,12 @@ const gameOver = async (data, io) => {
   }
 };
 
-export default { startTurn, chooseWord, startGuessing, drawing, guessedCorrectly, endTurn, gameOver };
+const handlePlayerLeave = async (data, io) => {
+  try {
+    await gameService.handlePlayerLeave(data, io);
+  } catch (error) {
+    console.error("Error handling player leave:", error);
+  }
+};
+
+export default { startTurn, chooseWord, startGuessing, drawing, guessedCorrectly, endTurn, gameOver,handlePlayerLeave };

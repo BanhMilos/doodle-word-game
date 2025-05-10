@@ -69,7 +69,8 @@ io.on("connection", (socket) => {
   socket.on("drawing", (data) => gameController.drawing(data, io));
   socket.on("endTurn", (data) => gameController.endTurn(data, io));
   socket.on("gameOver", (data) => gameController.gameOver(data, io));
-
+  socket.on("leaveRoom", (data) => {gameController.handlePlayerLeave(data, io);});
+  
   // Chat
   socket.on("chatMessage", (data) => chatController.sendChatToAll(data, io));
 });

@@ -7,7 +7,6 @@ const startTurn = async ({ roomId }, io) => {
   let roomData = await redis.get(`room:${roomId}`);
   roomData = JSON.parse(roomData);
 
-  // Chuyển vòng nếu hết lượt
   if (roomData.turn === roomData.turnsPerRound) {
     roomData.round += 1;
     roomData.turn = 0;
@@ -20,30 +19,23 @@ const startTurn = async ({ roomId }, io) => {
   let username;
 
   if (guessed.length > 0) {
-    // Chọn random từ danh sách người đoán đúng
     username = guessed[Math.floor(Math.random() * guessed.length)];
   } else {
-    // Chọn random player từ danh sách playerId
     const playerId = players[Math.floor(Math.random() * players.length)];
-
     const player = await Player.findById(playerId);
     if (!player) {
       console.error("⚠️ Player not found for ID:", playerId);
       return;
     }
-
     username = player.username;
   }
 
-  // Reset trạng thái lượt mới
   roomData.guessedCorrectlyPeople = [];
   roomData.drawingPlayer = username;
   roomData.drawings = [];
+  roomData.currentWord = "";
 
-  // Gửi lệnh xóa canvas
   io.to(roomId).emit("clearCanvas");
-
-  // Gửi bắt đầu lượt
   io.to(roomId).emit("startTurn", {
     username,
     turn: roomData.turn,
@@ -53,10 +45,12 @@ const startTurn = async ({ roomId }, io) => {
   await redis.set(`room:${roomId}`, JSON.stringify(roomData));
 };
 
-
 const chooseWord = async ({ username, wordsCount, roomId }, io) => {
   const words = generate(wordsCount);
-  io.to(roomId).emit("chooseWord", { username, words });
+  const player = await Player.findOne({ username });
+  if (player) {
+    io.to(player.socketID).emit("chooseWord", { username, words });
+  }
 };
 
 const startGuessing = async ({ roomId, word, username, drawTime }, io) => {
@@ -66,7 +60,7 @@ const startGuessing = async ({ roomId, word, username, drawTime }, io) => {
   roomData.currentWord = word;
   await redis.set(`room:${roomId}`, JSON.stringify(roomData));
 
-  io.to(roomId).emit("startGuessing", { username, word });
+  io.to(roomId).emit("startGuessing", { username });
 
   const interval = setInterval(async () => {
     drawTime -= 1;
@@ -98,12 +92,10 @@ const drawing = async ({ roomId, userId, drawingData }, io) => {
     const isDrawer = roomData.drawingPlayer === userId;
     if (!isDrawer) return;
 
-    //Lưu lịch sử vẽ
     roomData.drawings = roomData.drawings || [];
     roomData.drawings.push(drawingData);
     await redis.set(roomKey, JSON.stringify(roomData));
 
-    //Broadcast ra cho cả phòng
     io.to(roomId).emit("drawing", {
       drawingData,
       from: userId,
@@ -113,14 +105,21 @@ const drawing = async ({ roomId, userId, drawingData }, io) => {
   }
 };
 
-const guessedCorrectly = async ({ username, roomId }, io) => {
+const guessedCorrectly = async ({ username, roomId, message }, io) => {
   let roomData = await redis.get(`room:${roomId}`);
   roomData = JSON.parse(roomData);
 
-  roomData.guessedCorrectlyPeople.push(username);
-  await redis.set(`room:${roomId}`, JSON.stringify(roomData));
+  if (roomData.drawingPlayer === username) return;
 
-  io.to(roomId).emit("guessedCorrectly", { username });
+  if (
+    message.trim().toLowerCase() === roomData.currentWord.trim().toLowerCase()
+  ) {
+    if (!roomData.guessedCorrectlyPeople.includes(username)) {
+      roomData.guessedCorrectlyPeople.push(username);
+      await redis.set(`room:${roomId}`, JSON.stringify(roomData));
+      io.to(roomId).emit("guessedCorrectly", { username });
+    }
+  }
 };
 
 const endTurn = async ({ roomId, username, score }, io) => {
@@ -161,6 +160,34 @@ const gameOver = async ({ roomId, username, score }, io) => {
   }
 };
 
+const handlePlayerLeave = async ({ roomId, username }, io) => {
+  let roomDataRaw = await redis.get(`room:${roomId}`);
+  if (!roomDataRaw) return;
+
+  let roomData = JSON.parse(roomDataRaw);
+
+  roomData.players = roomData.players.filter((p) => p !== username);
+
+  if (roomData.drawingPlayer === username) {
+    roomData.guessedCorrectlyPeople = [];
+    roomData.drawingPlayer = "";
+    roomData.currentWord = "";
+    roomData.drawings = [];
+
+    await redis.set(`room:${roomId}`, JSON.stringify(roomData));
+
+    io.to(roomId).emit("turnEndedDueToDrawerLeave", {
+      message: `${username} (the drawer) left the room. Starting a new turn...`,
+    });
+
+    await startTurn({ roomId }, io);
+    return;
+  }
+
+  await redis.set(`room:${roomId}`, JSON.stringify(roomData));
+  io.to(roomId).emit("playerLeft", { username });
+};
+
 export default {
   startTurn,
   chooseWord,
@@ -169,4 +196,5 @@ export default {
   guessedCorrectly,
   endTurn,
   gameOver,
+  handlePlayerLeave,
 };
