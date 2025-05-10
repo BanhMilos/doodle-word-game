@@ -32,7 +32,7 @@ db.once("open", () => {
 // Middleware
 app.use(
   cors({
-    origin: "http://localhost:3000", 
+    origin: process.env.ORIGIN, 
     methods: ["GET", "POST", "PUT", "DELETE"], // Các phương thức HTTP cho phép
     allowedHeaders: ["Content-Type", "Authorization"], // Các headers cho phép
     credentials: true, // Cho phép gửi cookie và session
