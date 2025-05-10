@@ -1,0 +1,276 @@
+.game-room {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #3b5998 url('D:/học kì/web/image/bg.png');
+  background-size: cover;
+  font-family: Arial, sans-serif;
+  color: #fff;
+}
+
+.user-display {
+  color: white;
+  font-size: 1.2rem;
+  font-weight: bold;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 5px 10px;
+  border-radius: 5px;
+}
+
+.logout-button {
+  background-color: #ff4d4d;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+.logout-button:hover {
+  background-color: #e60000;
+}
+
+.header {
+  padding: 10px;
+  background: #4682b4;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.title-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.game-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 2px 2px 4px #000;
+  margin: 0;
+}
+
+.room-id {
+  font-size: 1rem;
+  color: #fff;
+  background: #32cd32;
+  padding: 2px 8px;
+  border-radius: 5px;
+  text-shadow: 1px 1px 2px #000;
+}
+
+.game-info {
+  display: flex;
+  gap: 20px;
+  font-size: 1.2rem;
+}
+
+.player-count {
+  background: #fff;
+  color: #000;
+  padding: 2px 5px;
+  border-radius: 5px;
+}
+
+.word-hint {
+  letter-spacing: 5px;
+  font-weight: bold;
+}
+
+.timer {
+  font-weight: bold;
+}
+
+.main-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.left-panel {
+  width: 20%;
+  padding: 10px;
+  background: #4682b4;
+  overflow-y: auto;
+}
+
+.player {
+  display: flex;
+  align-items: center;
+  padding: 5px;
+  margin-bottom: 5px;
+  background: #fff;
+  color: #000;
+  border-radius: 5px;
+}
+
+.player-rank {
+  margin-right: 5px;
+  font-weight: bold;
+}
+
+.player-avatar {
+  font-size: 1.5rem;
+  margin-right: 5px;
+}
+
+.player-name {
+  flex: 1;
+}
+
+.player-score {
+  margin-right: 5px;
+}
+
+.status {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+}
+
+.status.drawing {
+  background: #32cd32;
+}
+
+.status.guessed {
+  background: #ff4500;
+}
+
+.current-player {
+  background: #d3d3d3;
+}
+
+.center-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  margin: 0 10px; /* Add gap between center panel and adjacent panels */
+}
+
+.settings-form {
+  width: 95%;
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  color: #000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.settings-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+.settings-row label {
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+.settings-row select {
+  width: 100px;
+  padding: 5px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.settings-row.custom-words {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+}
+
+.settings-row textarea {
+  width: 100%;
+  height: 60px;
+  resize: none;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.9rem;
+}
+
+.settings-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.start-button,
+.invite-button {
+  flex: 1;
+  padding: 10px;
+  font-size: 1.2rem;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.start-button {
+  background: #32cd32;
+  color: #fff;
+}
+
+.start-button:hover {
+  background: #28a828;
+}
+
+.invite-button {
+  background: #4682b4;
+  color: #fff;
+}
+
+.invite-button:hover {
+  background: #3b6a9b;
+}
+
+.right-panel {
+  width: 20%;
+  padding: 10px;
+  background: #4682b4;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 10px;
+}
+
+.chat-message {
+  padding: 5px;
+  word-wrap: break-word;
+}
+
+.chat-message.highlight {
+  background: #32cd32;
+  border-radius: 5px;
+}
+
+.message-username {
+  font-weight: bold;
+}
+
+.chat-input {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  font-size: 1rem;
+}
