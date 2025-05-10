@@ -160,6 +160,34 @@ const gameOver = async ({ roomId, username, score }, io) => {
   }
 };
 
+const handlePlayerLeave = async ({ roomId, username }, io) => {
+  let roomDataRaw = await redis.get(`room:${roomId}`);
+  if (!roomDataRaw) return;
+
+  let roomData = JSON.parse(roomDataRaw);
+
+  roomData.players = roomData.players.filter((p) => p !== username);
+
+  if (roomData.drawingPlayer === username) {
+    roomData.guessedCorrectlyPeople = [];
+    roomData.drawingPlayer = "";
+    roomData.currentWord = "";
+    roomData.drawings = [];
+
+    await redis.set(`room:${roomId}`, JSON.stringify(roomData));
+
+    io.to(roomId).emit("turnEndedDueToDrawerLeave", {
+      message: `${username} (the drawer) left the room. Starting a new turn...`,
+    });
+
+    await startTurn({ roomId }, io);
+    return;
+  }
+
+  await redis.set(`room:${roomId}`, JSON.stringify(roomData));
+  io.to(roomId).emit("playerLeft", { username });
+};
+
 export default {
   startTurn,
   chooseWord,
@@ -168,4 +196,5 @@ export default {
   guessedCorrectly,
   endTurn,
   gameOver,
+  handlePlayerLeave,
 };
