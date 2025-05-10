@@ -1,6 +1,7 @@
 import express from "express";
 import passport from "passport";
 import authController from "../auth/authController.js";
+import authenticate from "../middlewares/authenticate.js";
 
 const router = express.Router();
 router.post("/register", async (req, res) => {
@@ -21,5 +22,6 @@ router.post(
 router.get("/refresh", authController.refresh);
 
 router.get("/logout", authController.logout);
+router.get("/me",authenticate, authController.me);
 
 export default router;
