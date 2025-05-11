@@ -397,3 +397,34 @@
   border-radius: 5px;
   font-size: 0.9rem;
 }
+.settings-buttons {
+  display: flex;
+  gap: 10px;        
+  width: 100%;
+}
+
+.settings-buttons button {
+  flex: 1;           
+  padding: 10px 0;  
+  font-size: 16px;   
+  border: none;     
+  border-radius: 5px;
+  cursor: pointer;   
+  transition: background-color 0.3s ease; 
+}
+
+.settings-buttons button:first-child {
+  margin-left: 5px;
+  background-color: #4CAF50; 
+  color: white;
+}
+
+.settings-buttons button:last-child {
+  margin-right: 5px;
+  background-color: #008CBA;
+  color: white;
+}
+
+.settings-buttons button:hover {
+  opacity: 0.8;        
+}

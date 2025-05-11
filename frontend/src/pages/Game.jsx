@@ -26,8 +26,20 @@ export default function Game() {
     setSettings((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleStartGame = () => {
-    console.log(`LOG : player : ${players}`);
+  const handleCreateRoom = () => {
+    socket.emit("createRoom", {
+      username: playerName,
+      roomName: settings.roomName,
+      occupancy: settings.players,
+      maxRound: settings.rounds,
+      turnsPerRound: settings.turns,
+      wordsCount: settings.wordCount,
+      drawTime: settings.drawTime,
+      hints: settings.hints,
+    });
+  };
+
+  const handleGameStart = () => {
     socket.emit("createRoom", {
       username: playerName,
       roomName: settings.roomName,
@@ -270,8 +282,11 @@ export default function Game() {
                 </div>
               </div>
               <div className="settings-buttons">
-                <button className="start-button" onClick={handleStartGame}>
-                  Create!
+                <button onClick={handleCreateRoom}>
+                  Create
+                </button>
+                <button onClick={handleGameStart}>
+                  Start
                 </button>
               </div>
             </div>

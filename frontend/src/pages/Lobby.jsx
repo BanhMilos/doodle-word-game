@@ -7,10 +7,12 @@ import socket from "../utils/socket";
 import useAxiosAuth from "../hooks/useAxiosAuth";
 import AppImages from "core/constants/AppImages";
 import HowToPlay from "components/HowToPlay";
+import LoadingIndicator from "components/LoadingIndicator";
 
 const avatars = ["😠", "😡", "😢", "😊", "😜", "😈", "🤓", "🤡"];
 
 export default function Lobby() {
+  const [isLoading, setIsLoading] = useState(false);
   const [name, setName] = useState("");
   const [roomId, setRoomId] = useState("");
   const [avatarIndex, setAvatarIndex] = useState(0);
@@ -20,6 +22,7 @@ export default function Lobby() {
   const axiosAuth = useAxiosAuth();
 
   useEffect(() => {
+    console.log("LOG : effect run");
     const fetchData = async () => {
       try {
         const response = await axiosAuth.get("api/profile", {
@@ -59,11 +62,12 @@ export default function Lobby() {
       socket.off("connect", onConnect);
       socket.off("noRoomAvailable", noRoomAvailable);
     };
-  });
+  }, [user]);
 
   const handlePlay = async () => {
     if (name) {
       try {
+        setIsLoading(true);
         await axiosAuth.post(
           "api/profile",
           { username: name, avatar: avatars[avatarIndex], socketID: socket.id },
@@ -72,12 +76,15 @@ export default function Lobby() {
         setUser(username, name, avatars[avatarIndex]);
         socket.emit("joinRoom", { username: name, roomId });
       } catch (error) {
+        console.log("LOG : wtf");
         console.log(error);
         return alert(error);
+      } finally {
+        setIsLoading(false);
       }
     } else {
       alert("Please enter your name");
-    }
+    } 
   };
 
   const handleCreatePrivateRoom = async () => {
@@ -111,6 +118,7 @@ export default function Lobby() {
 
   return (
     <div className="lobby-container">
+      {isLoading && <LoadingIndicator/>}
       <div className="lobby-header">
         {username && <div className="user-display">👤 {username}</div>}
         <button className="logout-button" onClick={handleLogout}>
