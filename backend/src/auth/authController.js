@@ -30,8 +30,8 @@ const login = async (req, res) => {
   await user.save();
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
-    sameSite: "strict",
-    secure: false,
+    sameSite: "None",
+    secure: true,
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
   res.status(200).json({ accessToken });
@@ -42,11 +42,13 @@ const refresh = async (req, res) => {
   if (!refreshToken) return res.sendStatus(401);
   try {
     const payload = jwt.verify(refreshToken, process.env.REFRESH_SECRET);
+    console.log(payload);
     const user = await User.findOne({ _id: payload.id });
-    if (!user || user.refreshToken !== refreshToken) return res.sendStatus(403);
+    if (!user) return res.sendStatus(403);
     const accessToken = createAccessToken(user);
     res.json({ accessToken });
   } catch (err) {
+    console.log(err);
     return res.sendStatus(403);
   }
 };
@@ -63,8 +65,8 @@ const logout = async (req, res) => {
     await user.save();
     res.clearCookie("refreshToken", {
       httpOnly: true,
-      sameSite: "strict",
-      secure: false,
+      sameSite: "None",
+      secure: true,
     });
   } catch (err) {
     res.clearCookie("refreshToken");
@@ -73,4 +75,8 @@ const logout = async (req, res) => {
   return res.sendStatus(200);
 };
 
-export default { register, login, refresh, logout };
+const me = async (req, res) => {
+  res.status(200).json(req.user);
+};
+
+export default { register, login, refresh, logout, me };

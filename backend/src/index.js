@@ -32,7 +32,7 @@ db.once("open", () => {
 // Middleware
 app.use(
   cors({
-    origin: "*", 
+    origin: process.env.ORIGIN, 
     methods: ["GET", "POST", "PUT", "DELETE"], // Các phương thức HTTP cho phép
     allowedHeaders: ["Content-Type", "Authorization"], // Các headers cho phép
     credentials: true, // Cho phép gửi cookie và session
@@ -59,7 +59,8 @@ io.on("connection", (socket) => {
 
   // Room
   socket.on("createRoom", (data) => roomController.createRoom(data, socket));
-  socket.on("joinRoom", (data) => roomController.joinRoom(data, socket, io));
+  socket.on("joinRoom", (data) => roomController.joinRoom(data, socket, io),);
+  socket.on("getRoomData", (data) => roomController.getRoomData(data, socket));
 
   // Game
   socket.on("startTurn", (data) => gameController.startTurn(data, io));

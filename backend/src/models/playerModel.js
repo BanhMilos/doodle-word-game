@@ -8,7 +8,6 @@ const playerSchema = mongoose.Schema({
     },
     socketID: {
         type: String,
-        required: true,
         trim: true
     },
     joinedAt: {
@@ -22,6 +21,13 @@ const playerSchema = mongoose.Schema({
     totalGames: {
         type: Number,
         default: 0
+    },
+    avatar: {
+        type: String
+    },
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
     }
 },{timestamps: true})
 
