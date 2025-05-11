@@ -62,25 +62,48 @@ const startGuessing = async ({ roomId, word, username, drawTime }, io) => {
 
   io.to(roomId).emit("startGuessing", { username });
 
-  const interval = setInterval(async () => {
+  const countdown = setInterval(async () => {
     drawTime -= 1;
     io.to(roomId).emit("drawTime", { drawTime });
 
-    if (drawTime === 0) {
-      clearInterval(interval);
+    if (drawTime <= 0) {
+      clearInterval(countdown);
+
       io.to(roomId).emit("guessingTimeOver", { word });
+
+      //gọi endturn, mỗi người đoán đúng được 100 điểm
+      const correctPeople = roomData.guessedCorrectlyPeople || [];
+      for (const correctUsername of correctPeople) {
+        await gameService.endTurn({
+          roomId,
+          username: correctUsername,
+          score: 100,
+        }, io);
+      }
+
+      //nếu không ai đoán đúng thì kết thúc lượt nhưng không cộng điểm
+      if (correctPeople.length === 0) {
+        await gameService.endTurn({
+          roomId,
+          username,
+          score: 0,
+        }, io);
+      }
+
+      //kiểm tra điều kiện end game
+      if (
+        roomData.turn === roomData.turnsPerRound &&
+        roomData.round === roomData.maxRound
+      ) {
+        io.to(roomId).emit("gameOver", { message: "Game Over" });
+      } else {
+        //bắt đầu lượt mới
+        await startTurn({ roomId }, io);
+      }
     }
   }, 1000);
-
-  if (
-    roomData.turn === roomData.turnsPerRound &&
-    roomData.round === roomData.maxRound
-  ) {
-    io.to(roomId).emit("gameOver", { message: "Game Over" });
-  } else {
-    await startTurn({ roomId }, io);
-  }
 };
+
 
 const drawing = async ({ roomId, userId, drawingData }, io) => {
   try {
@@ -114,6 +137,7 @@ const guessedCorrectly = async ({ username, roomId, message }, io) => {
   if (
     message.trim().toLowerCase() === roomData.currentWord.trim().toLowerCase()
   ) {
+    roomData.guessedCorrectlyPeople = roomData.guessedCorrectlyPeople || [];
     if (!roomData.guessedCorrectlyPeople.includes(username)) {
       roomData.guessedCorrectlyPeople.push(username);
       await redis.set(`room:${roomId}`, JSON.stringify(roomData));
@@ -166,6 +190,7 @@ const handlePlayerLeave = async ({ roomId, username }, io) => {
 
   let roomData = JSON.parse(roomDataRaw);
 
+  roomData.players = roomData.players || [];
   roomData.players = roomData.players.filter((p) => p !== username);
 
   if (roomData.drawingPlayer === username) {

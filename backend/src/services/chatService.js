@@ -8,6 +8,8 @@ const sendChatToAll = async ({ username, message, roomId, userId }, io) => {
     roomData = JSON.parse(roomData);
 
     const isDrawer = roomData.drawingPlayer === userId;
+
+    roomData.guessedCorrectlyPeople = roomData.guessedCorrectlyPeople || [];
     const hasGuessed = roomData.guessedCorrectlyPeople.includes(userId);
     const isCorrect = message.trim().toLowerCase() === roomData.currentWord.toLowerCase();
 
