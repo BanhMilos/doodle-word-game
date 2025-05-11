@@ -1,28 +1,40 @@
 import { generate } from "random-words";
 import redis from "../config/redis.js";
 import Player from "../models/playerModel.js";
-import Room from "../models/roomModel.js";
 const startTurn = async ({ roomId }, io) => {
   let roomData = await redis.get(`room:${roomId}`);
   roomData = JSON.parse(roomData);
+  roomData.isStarted = true;
   if (roomData.turn === roomData.turnsPerRound) {
     roomData.round += 1;
     roomData.turn = 0;
   }
   roomData.turn += 1;
-  const username =
-    roomData.guessedCorrectlyPeople[
-      Math.floor(Math.random() * roomData.guessedCorrectlyPeople.length)
-    ] ||
-    (await Player.findOne({
-      _id: roomData.players[
-        Math.floor(Math.random() * roomData.players.length)
-      ],
-    }).username);
-  if (roomData.guessedCorrectlyPeople) {
+  let username;
+
+  if (roomData.guessedCorrectlyPeople.length > 0) {
+    username =
+      roomData.guessedCorrectlyPeople[
+        Math.floor(Math.random() * roomData.guessedCorrectlyPeople.length)
+      ];
+  } else if (roomData.players.length > 0) {
+    const randomPlayerId =
+      roomData.players[Math.floor(Math.random() * roomData.players.length)];
+    const player = await Player.findOne({ _id: randomPlayerId });
+    if (player) {
+      username = player.username;
+    } else {
+      console.warn("Player not found in DB");
+    }
+  } else {
+    console.warn("No players in roomData");
+  }
+
+  if (roomData.guessedCorrectlyPeople.length) {
     roomData.guessedCorrectlyPeople = [];
   }
   roomData.drawingPlayer = username;
+  io.to(roomId).emit("getRoomData", roomData);
   io.to(roomId).emit("startTurn", {
     username,
     turn: roomData.turn,
@@ -37,6 +49,7 @@ const chooseWord = async ({ username, wordsCount, roomId }, io) => {
 };
 
 const startGuessing = async ({ roomId, word, username, drawTime }, io) => {
+  console.log(roomId);
   let roomData = await redis.get(`room:${roomId}`);
   roomData = JSON.parse(roomData);
   roomData.currentWord = word;
@@ -48,61 +61,40 @@ const startGuessing = async ({ roomId, word, username, drawTime }, io) => {
     if (drawTime === 0) {
       clearInterval(interval);
       io.to(roomId).emit("guessingTimeOver", { word });
+      if (
+        roomData.turn === roomData.turnsPerRound &&
+        roomData.round === roomData.maxRound
+      ) {
+        io.to(roomId).emit("gameOver", { message: "Game Over" });
+        await gameOver(roomData, io);
+      } else {
+        await startTurn({ roomId }, io);
+      }
     }
   }, 1000);
-  if (
-    roomData.turn === roomData.turnsPerRound &&
-    roomData.round === roomData.maxRound
-  ) {
-    io.to(roomId).emit("gameOver", { message: "Game Over" });
-  } else {
-    await startTurn({ roomId }, io);
-  }
 };
 
 const drawing = async ({ username, roomId }, io) => {
   io.to(roomId).emit("drawing", { username });
 };
 
-const guessedCorrectly = async ({ username, roomId }, io) => {
+const guessedCorrectly = async ({ username, roomId, score }, io) => {
   let roomData = await redis.get(`room:${roomId}`);
   roomData = JSON.parse(roomData);
   roomData.guessedCorrectlyPeople.push(username);
+  roomData.scores[username] += score;
   await redis.set(`room:${roomId}`, JSON.stringify(roomData));
-  io.to(roomId).emit("guessedCorrectly", { username });
+  io.to(roomId).emit("getRoomData", roomData);
 };
 
-const endTurn = async ({ roomId, username, score }, io) => {
-  let roomData = await redis.get(`room:${roomId}`);
-  roomData = JSON.parse(roomData);
-  if (roomData.scores[username]) roomData.scores[username] += score;
-  else roomData.scores[username] = score;
-  await redis.set(`room:${roomId}`, JSON.stringify(roomData));
-  io.to(roomId).emit("endTurn", { username, score });
-};
-
-const gameOver = async ({ roomId, username, score }, io) => {
-  const player = await Player.findOne({ username });
-  player.totalGames += 1;
-  player.highestScore = Math.max(player.highestScore, score);
-  await player.save();
-  let roomData = await redis.get(`room:${roomId}`);
-  roomData = JSON.parse(roomData);
-  roomData.players = roomData.players.filter((p) => p.username !== username);
-  if (roomData.players.length === 0) {
-    const room = await Room.findOne({ roomId });
-    room.occupancy = roomData.occupancy;
-    room.maxRound = roomData.maxRound;
-    room.turnsPerRound = roomData.turnsPerRound;
-    room.wordsCount = roomData.wordsCount;
-    room.drawTime = roomData.drawTime;
-    await room.save();
-    await redis.del(`room:${roomId}`);
-  } else {
-    roomData.scores[username] += score;
-    await redis.set(`room:${roomId}`, JSON.stringify(roomData));
-    io.to(roomId).emit("leaderboard", { scores: roomData.scores });
+const gameOver = async (roomData, io) => {
+  const players = await Player.find({ _id: { $in: roomData.players } });
+  for (const player of players) {
+    player.totalGames += 1;
+    player.highestScore = Math.max(player.highestScore, roomData.scores[player.username]);
+    await player.save();
   }
+  io.to(roomData.roomId).emit("leaderboard", roomData.scores);
 };
 
 export default {
@@ -111,6 +103,5 @@ export default {
   startGuessing,
   drawing,
   guessedCorrectly,
-  endTurn,
   gameOver,
 };

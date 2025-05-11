@@ -47,8 +47,9 @@ const createRoom = async (
     hints,
     isJoin: true,
     scores: {
-    [username]: 0,
-  },
+      [username]: 0,
+    },
+    isStarted: false,
     existingPlayers: [player],
     createdAt: Date.now(),
   };
@@ -157,6 +158,5 @@ const getRoomData = async ({ username, roomId }, socket) => {
     }
   }
 };
-
 
 export default { createRoom, joinRoom, getRoomData };
