@@ -65,7 +65,7 @@ io.on("connection", (socket) => {
   // Game
   socket.on("startTurn", (data) => gameController.startTurn(data, io));
   socket.on("chooseWord", (data) => gameController.chooseWord(data, io));
-  socket.on("startGuessing", (data, io) => gameController.startGuessing(data, io));
+  socket.on("startGuessing", (data) => gameController.startGuessing(data, io));
   socket.on("guessedCorrectly", (data) => gameController.guessedCorrectly(data, socket, io));
   socket.on("drawing", (data) => gameController.drawing(data, io));
   socket.on("endTurn", (data) => gameController.endTurn(data, io));

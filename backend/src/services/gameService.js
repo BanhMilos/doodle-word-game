@@ -4,6 +4,7 @@ import Player from "../models/playerModel.js";
 import Room from "../models/roomModel.js";
 
 const startTurn = async ({ roomId }, io) => {
+  console.log(`LOG : startTurn run ${roomId}`);
   let roomData = await redis.get(`room:${roomId}`);
   roomData = JSON.parse(roomData);
 
@@ -48,6 +49,7 @@ const startTurn = async ({ roomId }, io) => {
 const chooseWord = async ({ username, wordsCount, roomId }, io) => {
   const words = generate(wordsCount);
   const player = await Player.findOne({ username });
+  console.log(`LOG : chooseWord run ${username}`);
   if (player) {
     io.to(player.socketID).emit("chooseWord", { username, words });
   }
@@ -56,21 +58,25 @@ const chooseWord = async ({ username, wordsCount, roomId }, io) => {
 const startGuessing = async ({ roomId, word, username, drawTime }, io) => {
   let roomData = await redis.get(`room:${roomId}`);
   roomData = JSON.parse(roomData);
-
+  
   roomData.currentWord = word;
   await redis.set(`room:${roomId}`, JSON.stringify(roomData));
-
+  
+  console.log(`LOG : startGuessing run ${roomId} ${word} ${username} ${drawTime}`);
   io.to(roomId).emit("startGuessing", { username });
+  const waitForDrawTime = new Promise((resolve) => {
+    const interval = setInterval(async () => {
+      drawTime -= 1;
+      io.to(roomId).emit("drawTime", { drawTime });
+      if (drawTime === 0) {
+        clearInterval(interval);
+        io.to(roomId).emit("guessingTimeOver", { word });
+        resolve(); 
+      }
+    }, 1000);
+  });
 
-  const interval = setInterval(async () => {
-    drawTime -= 1;
-    io.to(roomId).emit("drawTime", { drawTime });
-
-    if (drawTime === 0) {
-      clearInterval(interval);
-      io.to(roomId).emit("guessingTimeOver", { word });
-    }
-  }, 1000);
+  await waitForDrawTime;
 
   if (
     roomData.turn === roomData.turnsPerRound &&
@@ -82,14 +88,15 @@ const startGuessing = async ({ roomId, word, username, drawTime }, io) => {
   }
 };
 
-const drawing = async ({ roomId, userId, drawingData }, io) => {
+const drawing = async ({ roomId, username, drawingData }, io) => {
+  //console.log(`LOG : drawing fired ${roomId} ${username}`)
   try {
     const roomKey = `room:${roomId}`;
     const roomDataRaw = await redis.get(roomKey);
     if (!roomDataRaw) return;
 
     const roomData = JSON.parse(roomDataRaw);
-    const isDrawer = roomData.drawingPlayer === userId;
+    const isDrawer = roomData.drawingPlayer === username;
     if (!isDrawer) return;
 
     roomData.drawings = roomData.drawings || [];
@@ -98,7 +105,7 @@ const drawing = async ({ roomId, userId, drawingData }, io) => {
 
     io.to(roomId).emit("drawing", {
       drawingData,
-      from: userId,
+      from: username,
     });
   } catch (error) {
     console.log(error);

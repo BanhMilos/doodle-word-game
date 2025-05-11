@@ -66,6 +66,7 @@ const createRoom = async (
     hints,
     wordsCount,
   });
+  socket.emit("getRoomData", roomData);
   socket.emit("chatMessage", {
     username,
     type: "create",

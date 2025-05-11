@@ -1,31 +1,27 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { Stage, Layer, Line, Rect, Circle } from "react-konva";
 import AppColors from "core/constants/AppColors";
 import AppImages from "core/constants/AppImages";
+import { clear } from "@testing-library/user-event/dist/clear";
 
-const DrawingBoard = () => {
+const DrawingBoard = ({ disableTool, showTooltip, socket, roomId, username }) => {
   const [lines, setLines] = useState([]);
   const [color, setColor] = useState("black");
-  const [fills, setFills] = useState([]);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [isCursorInside, setIsCursorInside] = useState(false);
   const isDrawing = useRef(false);
   const numColumn = Math.ceil(AppColors.colors.length / 2);
-  console.log(numColumn);
+
+  const clearBoard = () => {
+    setLines([]);
+  };
+
+  const undoLastLine = () => {
+    setLines(lines.slice(0, -1));
+  };
+
   const handleMouseDown = (e) => {
     const pos = e.target.getStage().getPointerPosition();
-    if (e.evt.shiftKey) {
-      setFills([
-        ...fills,
-        {
-          x: pos.x,
-          y: pos.y,
-          color: color,
-          radius: 20,
-        },
-      ]);
-      return;
-    }
 
     isDrawing.current = true;
     setLines([
@@ -36,8 +32,14 @@ const DrawingBoard = () => {
         strokeWidth: 2,
       },
     ]);
+    socket.emit("drawing", {
+      roomId: roomId,
+      username: username,
+      drawingData: lines,
+    });
   };
 
+  // Handle mouse move event for drawing
   const handleMouseMove = (e) => {
     const stage = e.target.getStage();
     const point = stage.getPointerPosition();
@@ -55,18 +57,37 @@ const DrawingBoard = () => {
 
     const updatedLines = [...lines.slice(0, -1), updatedLine];
     setLines(updatedLines);
+    socket.emit("drawing", {
+      roomId: roomId,
+      username: username,
+      drawingData: lines,
+    });
   };
 
   const handleMouseUp = () => {
     isDrawing.current = false;
   };
 
-  const clearCanvas = () => {
-    setLines([]);
-  };
+  const tooltipStyles = showTooltip
+    ? { display: "block", position: "absolute", top: "10px", left: "10px" }
+    : { display: "none" };
 
-  const undoLastLine = () => {
-    setLines(lines.slice(0, -1));
+  useEffect(() => {
+    socket.on("clearCanvas", () => {
+      setLines([]);
+    });
+    socket.on("drawing", (data) => {
+      if (username === data.from) return;
+      setLines(data.drawingData);
+    });
+    return () => {
+      socket.off("drawing");
+      socket.off("clearCanvas");
+    };
+  }, []);
+
+  const handleColorTooltip = (color) => {
+    return `Current color: ${color}`;
   };
 
   return (
@@ -74,10 +95,14 @@ const DrawingBoard = () => {
       style={{
         display: "flex",
         flexDirection: "column",
-        gap: 6,
         position: "relative",
+        backgroundColor: "white",
       }}
     >
+      <div style={tooltipStyles}>
+        <span>{handleColorTooltip(color)}</span>
+      </div>
+
       <Stage
         width={800}
         height={600}
@@ -88,7 +113,6 @@ const DrawingBoard = () => {
         onMouseLeave={() => setIsCursorInside(false)}
         style={{
           border: "1px solid #ccc",
-          borderRadius: 20,
           cursor: isCursorInside ? "none" : "default",
         }}
       >
@@ -106,17 +130,6 @@ const DrawingBoard = () => {
             />
           ))}
 
-          {fills.map((fill, i) => (
-            <Circle
-              key={`fill-${i}`}
-              x={fill.x}
-              y={fill.y}
-              radius={fill.radius}
-              fill={fill.color}
-              listening={false}
-            />
-          ))}
-
           {/* Cursor Circle */}
           {isCursorInside && (
             <Circle
@@ -131,10 +144,13 @@ const DrawingBoard = () => {
           )}
         </Layer>
       </Stage>
+
       <div
-        style={{ marginBottom: 10, display: "flex", alignItems: "flex-start" }}
+        style={{
+          display: disableTool ? "none" : "flex",
+          alignItems: "flex-start",
+        }}
       >
-        {/* Color grid */}
         <div
           style={{
             display: "grid",
@@ -142,18 +158,6 @@ const DrawingBoard = () => {
           }}
         >
           {AppColors.colors.map((c, i) => {
-            const isFirst = i === 0;
-            const isTopRight = i === numColumn - 1;
-            const isBottomLeft = i === AppColors.colors.length - numColumn;
-            const isBottomRight = i === AppColors.colors.length - 1;
-
-            const borderRadius = {
-              borderTopLeftRadius: isFirst ? 4 : 0,
-              borderTopRightRadius: isTopRight ? 4 : 0,
-              borderBottomLeftRadius: isBottomLeft ? 4 : 0,
-              borderBottomRightRadius: isBottomRight ? 4 : 0,
-            };
-
             return (
               <button
                 key={c}
@@ -167,7 +171,6 @@ const DrawingBoard = () => {
                   margin: 0,
                   cursor: "pointer",
                   outline: "none",
-                  ...borderRadius,
                 }}
                 title={c}
               />
@@ -175,11 +178,9 @@ const DrawingBoard = () => {
           })}
         </div>
 
-        {/* Action buttons on the right */}
         <div
           style={{
             position: "absolute",
-            bottom: 8,
             right: 0,
             display: "flex",
             gap: 8,
@@ -211,7 +212,7 @@ const DrawingBoard = () => {
           </button>
 
           <button
-            onClick={clearCanvas}
+            onClick={clearBoard}
             title="Clear Board"
             style={{
               width: 48,
