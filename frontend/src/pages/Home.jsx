@@ -1,18 +1,12 @@
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-export default function Home( { socket } ) {
+export default function Home({ socket }) {
   const navigate = useNavigate();
 
-  const handlePlay = () => {
+  useEffect(() => {
     navigate('/lobby');
-  };
+  }, [navigate]);
 
-  return (
-    <div style={{ textAlign: 'center', marginTop: '100px' }}>
-      <h1>✏️ Welcome to Skribbl Clone</h1>
-      <button onClick={handlePlay} style={{ padding: '10px 20px', fontSize: '18px' }}>
-        ▶️ Play
-      </button>
-    </div>
-  );
+  return null; // or you can return a loading screen if needed
 }

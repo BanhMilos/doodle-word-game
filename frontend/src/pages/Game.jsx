@@ -10,6 +10,7 @@ import WordSelect from "components/WordSelect";
 export default function Game() {
   const [loading, setLoading] = useState(true);
   const { playerName } = useStore();
+  const messagesEndRef = useRef(null);
   const [players, setPlayers] = useState([]);
   const [messages, setMessages] = useState([]);
   const [timer, setTimer] = useState(0);
@@ -18,14 +19,14 @@ export default function Game() {
   const [canChat, setCanChat] = useState(true);
   const [currentRoomId, setCurrentRoomId] = useState("");
   const [isGameStart, setIsGameStart] = useState(false);
-  const boardRef = useRef();
+  const [disableTool, setDisableTool] = useState(true);
   const [settings, setSettings] = useState({
     roomName: "",
     players: 8,
     language: "English",
-    drawTime: 80,
+    drawTime: 60,
     rounds: 1,
-    turns: 1,
+    turns: 3,
     wordCount: 3,
     hints: 2,
     words: [],
@@ -38,6 +39,8 @@ export default function Game() {
   };
 
   const handleCreateRoom = () => {
+    setLoading(true);
+
     socket.emit("createRoom", {
       username: playerName,
       roomName: settings.roomName,
@@ -48,6 +51,10 @@ export default function Game() {
       drawTime: settings.drawTime,
       hints: settings.hints,
     });
+
+    setTimeout(() => {
+      setLoading(false);
+    }, 1000);
   };
 
   const handleStartGame = () => {
@@ -55,14 +62,12 @@ export default function Game() {
     socket.emit("startTurn", {
       roomId: currentRoomId,
     });
-    setIsGameStart(true);
   };
 
   const handleChooseWord = (word) => {
     setIsChooseWord(false);
-    console.log(`LOG : handleChooseWord ${currentRoomId}`);
+    console.log(`LOG : handleChooseWord ${currentRoomId} ${word} ${playerName}`);
     handleSettingChange("guessingWord", word);
-    handleSettingChange("drawingPlayer", playerName);
     socket.emit("startGuessing", {
       roomId: currentRoomId,
       word: word,
@@ -104,6 +109,12 @@ export default function Game() {
     socket.on("getRoomData", handleGetRoomData);
     socket.on("chatMessage", (data) => setMessages((prev) => [...prev, data]));
     socket.on("startTurn", (data) => {
+      setIsGameStart(true);
+      handleSettingChange("drawingPlayer", data.username);
+      setDisableTool(playerName !== data.username);
+      console.log(`LOG : ${data.username} ${playerName}`);  
+      console.log(`LOG : ${data.username === playerName}`);  
+      console.log(`LOG : disableTool ${disableTool}`);
       setMessages((prev) => [
         ...prev,
         {
@@ -112,7 +123,6 @@ export default function Game() {
         },
       ]);
       setCanChat(true);
-      handleSettingChange("drawingPlayer", data.username);
       if (data.username === playerName)
         socket.emit("chooseWord", {
           username: playerName,
@@ -121,6 +131,7 @@ export default function Game() {
         });
     });
     socket.on("chooseWord", (data) => {
+      
       if (data.username === playerName) {
         handleSettingChange("words", data.words);
         setIsChooseWord(true);
@@ -134,12 +145,8 @@ export default function Game() {
         },
       ]);
     });
-    socket.on("clearCanvas", () => {
-      console.log(`LOG : clearCanvas`);
-      boardRef.current?.clearCanvas();
-    });
     socket.on("startGuessing", (data) => {
-      handleSettingChange("drawingPlayer", data.userName);
+      console.log(`LOG : startGuessing ${playerName} ${data.username}`);
       setMessages((prev) => [
         ...prev,
         {
@@ -149,7 +156,6 @@ export default function Game() {
       ]);
     });
     socket.on("drawTime", (data) => {
-      console.log(`LOG : drawTime ${JSON.stringify(data)}`);
       setTimer(data.drawTime);
     });
     socket.on("guessingTimeOver", (data) => {
@@ -161,7 +167,11 @@ export default function Game() {
         },
       ]);
     });
+
     socket.on("gameOver", (data) => {
+      handleSettingChange("words", []);
+      handleSettingChange("guessingWord", "");
+      handleSettingChange("drawingPlayer", "");
       setMessages((prev) => [
         ...prev,
         {
@@ -202,7 +212,11 @@ export default function Game() {
       socket.off("gameOver");
       socket.off("leaderboard");
     };
-  });
+  }, []);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const sendMessage = () => {
     if (!msg) return;
@@ -249,9 +263,11 @@ export default function Game() {
           </div>
           <div id="game-word">
             <div className="description">
-              {playerName === settings.drawingPlayer
+              {settings.drawingPlayer === ""
+                ? "Waiting"
+                : playerName === settings.drawingPlayer
                 ? settings.guessingWord
-                : "Waiting"}
+                : `${settings.guessingWord.length} letters`}
             </div>
             {/*<span className="word-hint">____asdasd__</span>*/}
           </div>
@@ -283,7 +299,12 @@ export default function Game() {
         </div>
         <div id="game-players-footer"></div>
         <div id="game-canvas">
-          <DrawingBoard disableTool={false} ref={boardRef} />
+          <DrawingBoard
+            disableTool={disableTool}
+            socket={socket}
+            roomId={currentRoomId}
+            username={playerName}
+          />
           <div
             className={`overlay ${isGameStart ? "hidden" : ""}`}
             style={{ display: isGameStart ? "none" : "block" }}
@@ -377,23 +398,6 @@ export default function Game() {
                   </select>
                 </div>
                 <div className="key">
-                  <label>Turns</label>
-                </div>
-                <div className="value">
-                  <select
-                    value={settings.rounds}
-                    onChange={(e) =>
-                      handleSettingChange("turns", parseInt(e.target.value))
-                    }
-                  >
-                    {[1, 2, 3, 4, 5].map((round) => (
-                      <option key={round} value={round}>
-                        {round}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="key">
                   <img src={AppImages.WordCount} />
                   <label>Word Count</label>
                 </div>
@@ -455,6 +459,7 @@ export default function Game() {
                 {m.message}
               </div>
             ))}
+            <div ref={messagesEndRef} />
           </div>
           <input
             className="chat-input"
