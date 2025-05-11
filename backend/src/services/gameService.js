@@ -4,6 +4,7 @@ import Player from "../models/playerModel.js";
 import Room from "../models/roomModel.js";
 
 const startTurn = async ({ roomId }, io) => {
+  console.log(`LOG : startTurn run ${roomId}`);
   let roomData = await redis.get(`room:${roomId}`);
   roomData = JSON.parse(roomData);
 
@@ -48,6 +49,7 @@ const startTurn = async ({ roomId }, io) => {
 const chooseWord = async ({ username, wordsCount, roomId }, io) => {
   const words = generate(wordsCount);
   const player = await Player.findOne({ username });
+  console.log(`LOG : chooseWord run ${username}`);
   if (player) {
     io.to(player.socketID).emit("chooseWord", { username, words });
   }
@@ -56,14 +58,16 @@ const chooseWord = async ({ username, wordsCount, roomId }, io) => {
 const startGuessing = async ({ roomId, word, username, drawTime }, io) => {
   let roomData = await redis.get(`room:${roomId}`);
   roomData = JSON.parse(roomData);
-
+  
   roomData.currentWord = word;
   await redis.set(`room:${roomId}`, JSON.stringify(roomData));
-
+  
+  console.log(`LOG : startGuessing run ${roomId} ${word} ${username} ${drawTime}`);
   io.to(roomId).emit("startGuessing", { username });
-
+  console.log(`LOG : what the fuck`);
   const interval = setInterval(async () => {
     drawTime -= 1;
+    console.log(`LOG : drawtime emitting ${drawTime}`);
     io.to(roomId).emit("drawTime", { drawTime });
 
     if (drawTime === 0) {

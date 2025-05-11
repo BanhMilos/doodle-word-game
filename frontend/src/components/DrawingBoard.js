@@ -1,222 +1,240 @@
-import React, { useRef, useState } from "react";
+import React, {
+  useRef,
+  useState,
+  useEffect,
+  useImperativeHandle,
+  forwardRef,
+} from "react";
 import { Stage, Layer, Line, Rect, Circle } from "react-konva";
 import AppColors from "core/constants/AppColors";
 import AppImages from "core/constants/AppImages";
 
-const DrawingBoard = () => {
-  const [lines, setLines] = useState([]);
-  const [color, setColor] = useState("black");
-  const [fills, setFills] = useState([]);
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-  const [isCursorInside, setIsCursorInside] = useState(false);
-  const isDrawing = useRef(false);
-  const numColumn = Math.ceil(AppColors.colors.length / 2);
-  const handleMouseDown = (e) => {
-    const pos = e.target.getStage().getPointerPosition();
-    if (e.evt.shiftKey) {
-      setFills([
-        ...fills,
-        {
-          x: pos.x,
-          y: pos.y,
-          color: color,
-          radius: 20,
-        },
-      ]);
-      return;
-    }
+const DrawingBoard = forwardRef(
+  ({ disableTool, showTooltip, setCanvasDataCallback }, ref) => {
+    const [lines, setLines] = useState([]);
+    const [color, setColor] = useState("black");
+    const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+    const [isCursorInside, setIsCursorInside] = useState(false);
+    const isDrawing = useRef(false);
+    const numColumn = Math.ceil(AppColors.colors.length / 2);
 
-    isDrawing.current = true;
-    setLines([
-      ...lines,
-      {
-        points: [pos.x, pos.y],
-        stroke: color,
-        strokeWidth: 2,
-      },
-    ]);
-  };
+    useImperativeHandle(ref, () => ({
+      clearCanvas: () => clearBoard(),
+    }));
 
-  const handleMouseMove = (e) => {
-    const stage = e.target.getStage();
-    const point = stage.getPointerPosition();
-    setMousePos(point);
-
-    if (!isDrawing.current) return;
-
-    const lastLine = lines[lines.length - 1];
-    const newPoints = lastLine.points.concat([point.x, point.y]);
-
-    const updatedLine = {
-      ...lastLine,
-      points: newPoints,
+    const clearBoard = () => {
+      setLines([]);
     };
 
-    const updatedLines = [...lines.slice(0, -1), updatedLine];
-    setLines(updatedLines);
-  };
+    const undoLastLine = () => {
+      setLines(lines.slice(0, -1));
+    };
 
-  const handleMouseUp = () => {
-    isDrawing.current = false;
-  };
+    const handleMouseDown = (e) => {
+      const pos = e.target.getStage().getPointerPosition();
 
-  const clearCanvas = () => {
-    setLines([]);
-  };
+      isDrawing.current = true;
+      setLines([
+        ...lines,
+        {
+          points: [pos.x, pos.y],
+          stroke: color,
+          strokeWidth: 2,
+        },
+      ]);
+    };
 
-  const undoLastLine = () => {
-    setLines(lines.slice(0, -1));
-  };
+    // Handle mouse move event for drawing
+    const handleMouseMove = (e) => {
+      const stage = e.target.getStage();
+      const point = stage.getPointerPosition();
+      setMousePos(point);
 
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        position: "relative",
-        backgroundColor: 'white'
-      }}
-    >
-      <Stage
-        width={800}
-        height={600}
-        onMouseDown={handleMouseDown}
-        onMousemove={handleMouseMove}
-        onMouseup={handleMouseUp}
-        onMouseEnter={() => setIsCursorInside(true)}
-        onMouseLeave={() => setIsCursorInside(false)}
+      if (!isDrawing.current) return;
+
+      const lastLine = lines[lines.length - 1];
+      const newPoints = lastLine.points.concat([point.x, point.y]);
+
+      const updatedLine = {
+        ...lastLine,
+        points: newPoints,
+      };
+
+      const updatedLines = [...lines.slice(0, -1), updatedLine];
+      setLines(updatedLines);
+    };
+
+    const handleMouseUp = () => {
+      isDrawing.current = false;
+    };
+
+    const tooltipStyles = showTooltip
+      ? { display: "block", position: "absolute", top: "10px", left: "10px" }
+      : { display: "none" };
+
+    useEffect(() => {
+      if (setCanvasDataCallback) {
+        setCanvasDataCallback({
+          lines,
+        });
+      }
+    }, [lines, setCanvasDataCallback]);
+
+    const setCanvasData = (canvasData) => {
+      setLines(canvasData.lines || []);
+    };
+
+    const handleColorTooltip = (color) => {
+      return `Current color: ${color}`;
+    };
+
+    return (
+      <div
         style={{
-          border: "1px solid #ccc",
-          cursor: isCursorInside ? "none" : "default",
+          display: "flex",
+          flexDirection: "column",
+          position: "relative",
+          backgroundColor: "white",
         }}
       >
-        <Layer>
-          <Rect width={800} height={600} fill="white" />
-          {lines.map((line, i) => (
-            <Line
-              key={i}
-              points={line.points}
-              stroke={line.stroke}
-              strokeWidth={line.strokeWidth}
-              tension={0.5}
-              lineCap="round"
-              globalCompositeOperation="source-over"
-            />
-          ))}
-
-          {fills.map((fill, i) => (
-            <Circle
-              key={`fill-${i}`}
-              x={fill.x}
-              y={fill.y}
-              radius={fill.radius}
-              fill={fill.color}
-              listening={false}
-            />
-          ))}
-
-          {/* Cursor Circle */}
-          {isCursorInside && (
-            <Circle
-              x={mousePos.x}
-              y={mousePos.y}
-              radius={5}
-              fill={color}
-              stroke="black"
-              strokeWidth={1}
-              listening={false}
-            />
-          )}
-        </Layer>
-      </Stage>
-      <div style={{ display: "flex", alignItems: "flex-start" }}>
-        {/* Color grid */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: `repeat(${numColumn}, 24px)`,
-          }}
-        >
-          {AppColors.colors.map((c, i) => {
-            return (
-              <button
-                key={c}
-                onClick={() => setColor(c)}
-                style={{
-                  width: 24,
-                  height: 24,
-                  backgroundColor: c,
-                  border: "none",
-                  padding: 0,
-                  margin: 0,
-                  cursor: "pointer",
-                  outline: "none",
-                }}
-                title={c}
-              />
-            );
-          })}
+        <div style={tooltipStyles}>
+          <span>{handleColorTooltip(color)}</span>
         </div>
 
-        {/* Action buttons on the right */}
-        <div
+        <Stage
+          width={800}
+          height={600}
+          onMouseDown={handleMouseDown}
+          onMousemove={handleMouseMove}
+          onMouseup={handleMouseUp}
+          onMouseEnter={() => setIsCursorInside(true)}
+          onMouseLeave={() => setIsCursorInside(false)}
           style={{
-            position: "absolute",
-            right: 0,
-            display: "flex",
-            gap: 8,
+            border: "1px solid #ccc",
+            cursor: isCursorInside ? "none" : "default",
           }}
         >
-          <button
-            onClick={undoLastLine}
-            title="Undo"
-            style={{
-              width: 48,
-              height: 48,
-              backgroundColor: "white",
-              color: "white",
-              fontWeight: "bold",
-              fontSize: 14,
-              border: "none",
-              borderRadius: 2,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <img
-              src={AppImages.Undo}
-              alt="Undo"
-              style={{ width: 36, height: 36 }}
-            />
-          </button>
+          <Layer>
+            <Rect width={800} height={600} fill="white" />
+            {lines.map((line, i) => (
+              <Line
+                key={i}
+                points={line.points}
+                stroke={line.stroke}
+                strokeWidth={line.strokeWidth}
+                tension={0.5}
+                lineCap="round"
+                globalCompositeOperation="source-over"
+              />
+            ))}
 
-          <button
-            onClick={clearCanvas}
-            title="Clear Board"
+            {/* Cursor Circle */}
+            {isCursorInside && (
+              <Circle
+                x={mousePos.x}
+                y={mousePos.y}
+                radius={5}
+                fill={color}
+                stroke="black"
+                strokeWidth={1}
+                listening={false}
+              />
+            )}
+          </Layer>
+        </Stage>
+
+        <div
+          style={{
+            display: disableTool ? "none" : "flex",
+            alignItems: "flex-start",
+          }}
+        >
+          <div
             style={{
-              width: 48,
-              height: 48,
-              backgroundColor: "white",
-              color: "white",
-              fontWeight: "bold",
-              fontSize: 14,
-              border: "none",
-              borderRadius: 2,
-              cursor: "pointer",
+              display: "grid",
+              gridTemplateColumns: `repeat(${numColumn}, 24px)`,
             }}
           >
-            <img
-              src={AppImages.Clear}
-              alt="Clear"
-              style={{ width: 40, height: 40 }}
-            />
-          </button>
+            {AppColors.colors.map((c, i) => {
+              return (
+                <button
+                  key={c}
+                  onClick={() => setColor(c)}
+                  style={{
+                    width: 24,
+                    height: 24,
+                    backgroundColor: c,
+                    border: "none",
+                    padding: 0,
+                    margin: 0,
+                    cursor: "pointer",
+                    outline: "none",
+                  }}
+                  title={c}
+                />
+              );
+            })}
+          </div>
+
+          <div
+            style={{
+              position: "absolute",
+              right: 0,
+              display: "flex",
+              gap: 8,
+            }}
+          >
+            <button
+              onClick={undoLastLine}
+              title="Undo"
+              style={{
+                width: 48,
+                height: 48,
+                backgroundColor: "white",
+                color: "white",
+                fontWeight: "bold",
+                fontSize: 14,
+                border: "none",
+                borderRadius: 2,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <img
+                src={AppImages.Undo}
+                alt="Undo"
+                style={{ width: 36, height: 36 }}
+              />
+            </button>
+
+            <button
+              onClick={clearBoard}
+              title="Clear Board"
+              style={{
+                width: 48,
+                height: 48,
+                backgroundColor: "white",
+                color: "white",
+                fontWeight: "bold",
+                fontSize: 14,
+                border: "none",
+                borderRadius: 2,
+                cursor: "pointer",
+              }}
+            >
+              <img
+                src={AppImages.Clear}
+                alt="Clear"
+                style={{ width: 40, height: 40 }}
+              />
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  );
-};
+    );
+  }
+);
 
 export default DrawingBoard;

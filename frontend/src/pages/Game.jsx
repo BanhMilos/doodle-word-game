@@ -1,28 +1,36 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import useStore from "../store";
 import "../styles/room.css";
 import socket from "../utils/socket";
 import AppImages from "core/constants/AppImages";
 import DrawingBoard from "components/DrawingBoard";
 import LoadingSpinner from "components/LoadingIndicator";
+import WordSelect from "components/WordSelect";
 
 export default function Game() {
   const [loading, setLoading] = useState(true);
   const { playerName } = useStore();
   const [players, setPlayers] = useState([]);
   const [messages, setMessages] = useState([]);
+  const [timer, setTimer] = useState(0);
+  const [isChooseWord, setIsChooseWord] = useState(false);
   const [msg, setMsg] = useState("");
+  const [canChat, setCanChat] = useState(true);
   const [currentRoomId, setCurrentRoomId] = useState("");
   const [isGameStart, setIsGameStart] = useState(false);
+  const boardRef = useRef();
   const [settings, setSettings] = useState({
     roomName: "",
     players: 8,
     language: "English",
     drawTime: 80,
-    rounds: 0,
-    turns: 0,
+    rounds: 1,
+    turns: 1,
     wordCount: 3,
     hints: 2,
+    words: [],
+    guessingWord: "",
+    drawingPlayer: "",
   });
 
   const handleSettingChange = (key, value) => {
@@ -30,7 +38,6 @@ export default function Game() {
   };
 
   const handleCreateRoom = () => {
-    console.log(`${playerName} create room`);
     socket.emit("createRoom", {
       username: playerName,
       roomName: settings.roomName,
@@ -43,11 +50,25 @@ export default function Game() {
     });
   };
 
-  const handleGameStart = () => {
+  const handleStartGame = () => {
+    console.log("LOG : handleStartGame");
     socket.emit("startTurn", {
-      roomId: currentRoomId
+      roomId: currentRoomId,
     });
     setIsGameStart(true);
+  };
+
+  const handleChooseWord = (word) => {
+    setIsChooseWord(false);
+    console.log(`LOG : handleChooseWord ${currentRoomId}`);
+    handleSettingChange("guessingWord", word);
+    handleSettingChange("drawingPlayer", playerName);
+    socket.emit("startGuessing", {
+      roomId: currentRoomId,
+      word: word,
+      username: playerName,
+      drawTime: settings.drawTime,
+    });
   };
 
   useEffect(() => {
@@ -63,8 +84,9 @@ export default function Game() {
           score: 0,
         },
       ]);
-      console.log(`LOG ; approve : ${players.length} ${data.username}`);
+      console.log(`LOG ; approve player : ${players.length} ${data.username}`);
     });
+
     const handleGetRoomData = (data) => {
       console.log(`LOG : getRoomData called ${JSON.stringify(data)}`);
       setCurrentRoomId(data.roomId);
@@ -76,20 +98,126 @@ export default function Game() {
           score: player.score,
         }))
       );
-      setLoading(false); 
+      setLoading(false);
     };
 
     socket.on("getRoomData", handleGetRoomData);
     socket.on("chatMessage", (data) => setMessages((prev) => [...prev, data]));
+    socket.on("startTurn", (data) => {
+      setMessages((prev) => [
+        ...prev,
+        {
+          username: "System",
+          message: `Round ${data.round} turn ${data.turn} started`,
+        },
+      ]);
+      setCanChat(true);
+      handleSettingChange("drawingPlayer", data.username);
+      if (data.username === playerName)
+        socket.emit("chooseWord", {
+          username: playerName,
+          wordsCount: settings.wordCount,
+          roomId: currentRoomId,
+        });
+    });
+    socket.on("chooseWord", (data) => {
+      if (data.username === playerName) {
+        handleSettingChange("words", data.words);
+        setIsChooseWord(true);
+      }
+      console.log(`LOG : chooseWord ${JSON.stringify(data)}`);
+      setMessages((prev) => [
+        ...prev,
+        {
+          username: "System",
+          message: `${data.username} are choosing words`,
+        },
+      ]);
+    });
+    socket.on("clearCanvas", () => {
+      console.log(`LOG : clearCanvas`);
+      boardRef.current?.clearCanvas();
+    });
+    socket.on("startGuessing", (data) => {
+      handleSettingChange("drawingPlayer", data.userName);
+      setMessages((prev) => [
+        ...prev,
+        {
+          username: "System",
+          message: `Start guessing the word chosen by ${data.username}`,
+        },
+      ]);
+    });
+    socket.on("drawTime", (data) => {
+      console.log(`LOG : drawTime ${JSON.stringify(data)}`);
+      setTimer(data.drawTime);
+    });
+    socket.on("guessingTimeOver", (data) => {
+      setMessages((prev) => [
+        ...prev,
+        {
+          username: "System",
+          message: `Guessing time over, the word was ${data.word}`,
+        },
+      ]);
+    });
+    socket.on("gameOver", (data) => {
+      setMessages((prev) => [
+        ...prev,
+        {
+          username: "System",
+          message: `Game over!!!!!!!!!`,
+        },
+      ]);
+    });
+    socket.on("leaderboard", (data) => {
+      console.log(JSON.stringify(data));
+      setMessages((prev) => [
+        ...prev,
+        {
+          username: "System",
+          message: data
+            ? "🏆 Leaderboard:\n" +
+              Object.entries(data)
+                .sort((a, b) => b[1] - a[1])
+                .map(
+                  ([username, score], index) =>
+                    `${index + 1}. ${username}: ${score}`
+                )
+                .join("\n")
+            : "🏆 Leaderboard chưa có dữ liệu.",
+        },
+      ]);
+    });
     socket.emit("getRoomData", { username: playerName });
     return () => {
       socket.off("approveJoin");
       socket.off("chatMessage");
-      socket.off("getRoomData", handleGetRoomData);
+      socket.off("getRoomData");
+      socket.off("startTurn");
+      socket.off("chooseWord");
+      socket.off("startGuessing");
+      socket.off("drawTime");
+      socket.off("guessingTimeOver");
+      socket.off("gameOver");
+      socket.off("leaderboard");
     };
-  }, []);
+  });
 
   const sendMessage = () => {
+    if (!msg) return;
+    if (msg.trim() === settings.guessingWord) {
+      if (canChat) {
+        socket.emit("guessedCorrectly", {
+          username: playerName,
+          roomId: currentRoomId,
+          score: (timer / settings.drawTime) * 1000,
+        });
+        setCanChat(false);
+        setMsg("");
+      }
+      return;
+    }
     socket.emit("chatMessage", {
       username: playerName,
       message: msg,
@@ -100,7 +228,13 @@ export default function Game() {
 
   return (
     <div id="game-room">
-      {loading && <LoadingSpinner/>}
+      {loading && <LoadingSpinner />}
+      {isChooseWord && (
+        <WordSelect
+          data={settings.words}
+          onSelect={(word) => handleChooseWord(word)}
+        />
+      )}
       <div id="game-wrapper">
         <div id="game-logo">
           <img src={AppImages.Logo} alt="Logo" />
@@ -108,13 +242,17 @@ export default function Game() {
         </div>
         <div id="game-bar">
           <div id="game-clock">
-            <span className="timer">0</span>
+            <span className="timer">{timer}</span>
           </div>
           <div id="game-round">
             <div className="text">Round 1 of 3</div>
           </div>
           <div id="game-word">
-            <div className="description">Waiting</div>
+            <div className="description">
+              {playerName === settings.drawingPlayer
+                ? settings.guessingWord
+                : "Waiting"}
+            </div>
             {/*<span className="word-hint">____asdasd__</span>*/}
           </div>
         </div>
@@ -145,9 +283,15 @@ export default function Game() {
         </div>
         <div id="game-players-footer"></div>
         <div id="game-canvas">
-          <DrawingBoard />
-          <div className={`overlay ${isGameStart ? "hidden" : ""}`} style={{display:isGameStart ? 'none' : 'block'}}></div>
-          <div className={`overlay-content ${isGameStart ? "hidden" : ""}`} style={{ top: "0%", display:isGameStart ? 'none' : 'block'}}>
+          <DrawingBoard disableTool={false} ref={boardRef} />
+          <div
+            className={`overlay ${isGameStart ? "hidden" : ""}`}
+            style={{ display: isGameStart ? "none" : "block" }}
+          ></div>
+          <div
+            className={`overlay-content ${isGameStart ? "hidden" : ""}`}
+            style={{ top: "0%", display: isGameStart ? "none" : "block" }}
+          >
             <div className="room show">
               <div className="settings-form">
                 <div className="key">
@@ -287,10 +431,11 @@ export default function Game() {
                 </div>
               </div>
               <div className="settings-buttons">
-                <button onClick={handleCreateRoom}>
-                  Create
-                </button>
-                <button onClick={handleGameStart} disabled={players.length >= 2 ? false : true}>
+                <button onClick={handleCreateRoom}>Create</button>
+                <button
+                  onClick={handleStartGame}
+                  disabled={players.length >= 2 ? false : true}
+                >
                   Start
                 </button>
               </div>

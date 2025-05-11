@@ -54,16 +54,19 @@ export default function Lobby() {
 
     socket.on("connect", onConnect);
     socket.on("noRoomAvailable", noRoomAvailable);
-    socket.once("approveJoin", (data) => {
-      console.log("Joined room:", data.roomId);
-      navigate("/game");
-    });
+    socket.once("approveJoin", handleApproveJoin);
 
     return () => {
+      socket.off("approveJoin", handleApproveJoin);
       socket.off("connect", onConnect);
       socket.off("noRoomAvailable", noRoomAvailable);
     };
   }, [user]);
+
+  const handleApproveJoin = (data) => {
+    console.log("Joined room:", data.roomId);
+    navigate("/game");
+  };
 
   const handlePlay = async () => {
     if (name) {
@@ -115,7 +118,7 @@ export default function Lobby() {
   const handleNextAvatar = () => {
     setAvatarIndex((prev) => (prev === avatars.length - 1 ? 0 : prev + 1));
   };
-
+  
   return (
     <div className="lobby-container">
       {isLoading && <LoadingIndicator/>}
