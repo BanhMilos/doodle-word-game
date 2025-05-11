@@ -5,14 +5,16 @@ import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import socket from "../utils/socket";
 import useAxiosAuth from "../hooks/useAxiosAuth";
+import AppImages from "core/constants/AppImages";
+import HowToPlay from "components/HowToPlay";
 
-const avatars = ["😠", "😡", "😢", "😊", "😜", "😈", "🤓", "🤡"]; 
+const avatars = ["😠", "😡", "😢", "😊", "😜", "😈", "🤓", "🤡"];
 
 export default function Lobby() {
   const [name, setName] = useState("");
   const [roomId, setRoomId] = useState("");
-  const [avatarIndex, setAvatarIndex] = useState(0); 
-  const { username, playerName, avatar, setUser } = useStore();
+  const [avatarIndex, setAvatarIndex] = useState(0);
+  const { username, setUser } = useStore();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const axiosAuth = useAxiosAuth();
@@ -20,14 +22,14 @@ export default function Lobby() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axiosAuth.get(
-          "api/profile",
-          {
-            withCredentials: true,
-          }
-        );
+        const response = await axiosAuth.get("api/profile", {
+          withCredentials: true,
+        });
         if (response.status !== 200) return;
-        const {player,user:{name}} = response.data;
+        const {
+          player,
+          user: { name },
+        } = response.data;
         setName(player.username);
         setAvatarIndex(avatars.indexOf(player.avatar));
         setUser(name, player.username, player.avatar);
@@ -42,43 +44,55 @@ export default function Lobby() {
     const onConnect = () => {
       console.log("connected with id", socket.id);
     };
-    const noRoomAvailable=({message}) => {
+    const noRoomAvailable = ({ message }) => {
       alert(message);
-    }
+    };
 
-    socket.off("connect", onConnect); // cleanup trước
     socket.on("connect", onConnect);
-    socket.off("noRoomAvailable", noRoomAvailable);
     socket.on("noRoomAvailable", noRoomAvailable);
+    socket.once("approveJoin", (data) => {
+      console.log("Joined room:", data.roomId);
+      navigate("/game");
+    });
 
-    // Cleanup khi component unmount
     return () => {
       socket.off("connect", onConnect);
       socket.off("noRoomAvailable", noRoomAvailable);
     };
-  }, []);
+  });
 
   const handlePlay = async () => {
     if (name) {
       try {
-        console.log(socket.id);
-        const response = await axiosAuth.post(
+        await axiosAuth.post(
           "api/profile",
           { username: name, avatar: avatars[avatarIndex], socketID: socket.id },
           { withCredentials: true }
         );
+        setUser(username, name, avatars[avatarIndex]);
+        socket.emit("joinRoom", { username: name, roomId });
       } catch (error) {
         console.log(error);
         return alert(error);
       }
-
-      setUser(username, name, avatars[avatarIndex]);
-      socket.emit("joinRoom", {
-        username: name,
-      });
-      navigate("/game");
     } else {
       alert("Please enter your name");
+    }
+  };
+
+  const handleCreatePrivateRoom = async () => {
+    if (!name) return alert("Please enter your name");
+    try {
+      await axiosAuth.post(
+        "api/profile",
+        { username: name, avatar: avatars[avatarIndex], socketID: socket.id },
+        { withCredentials: true }
+      );
+
+      navigate("/game");
+    } catch (error) {
+      console.log(error);
+      return alert(error);
     }
   };
 
@@ -95,7 +109,6 @@ export default function Lobby() {
     setAvatarIndex((prev) => (prev === avatars.length - 1 ? 0 : prev + 1));
   };
 
-  console.log(username);
   return (
     <div className="lobby-container">
       <div className="lobby-header">
@@ -105,7 +118,7 @@ export default function Lobby() {
         </button>
       </div>
 
-      <h1 className="lobby-title">SKRIBBL.io ✏️</h1>
+      <img src={AppImages.Logo} alt="Logo" className="logo" />
       <div className="lobby-form">
         <div className="input-row">
           <input
@@ -139,8 +152,14 @@ export default function Lobby() {
         <button className="play-button" onClick={handlePlay}>
           Play!
         </button>
-        <button className="private-room-button">Create Private Room</button>
+        <button
+          className="private-room-button"
+          onClick={handleCreatePrivateRoom}
+        >
+          Create Private Room
+        </button>
       </div>
+      <HowToPlay/>
     </div>
   );
 }

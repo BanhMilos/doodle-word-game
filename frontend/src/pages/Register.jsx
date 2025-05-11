@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import '../styles/loginandregister.css';
 import { useNavigate } from 'react-router-dom';
 import useAxiosAuth from '../hooks/useAxiosAuth';
+import AppImages from 'core/constants/AppImages';
+import HowToPlay from 'components/HowToPlay';
 
 const Register = () => {
   const [username, setUsername] = useState('');
@@ -33,7 +35,7 @@ const Register = () => {
 
   return (
     <div className="login-container">
-      <h1 className="skribbl-logo">SKRIBBL.io</h1>
+      <img src={AppImages.Logo} alt="Logo" className="logo" />
       <div className="bg-blue-900 p-6 rounded-lg border-2 border-black w-96">
         <div className="form-header">Register</div>
         <div className="form-group">
@@ -77,6 +79,7 @@ const Register = () => {
           <button className="confirm-btn" onClick={handleRegister}>Confirm</button>
         </div>
       </div>
+      <HowToPlay/>
     </div>
   );
 };
