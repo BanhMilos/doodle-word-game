@@ -11,7 +11,6 @@ const DrawingBoard = () => {
   const [isCursorInside, setIsCursorInside] = useState(false);
   const isDrawing = useRef(false);
   const numColumn = Math.ceil(AppColors.colors.length / 2);
-  console.log(numColumn);
   const handleMouseDown = (e) => {
     const pos = e.target.getStage().getPointerPosition();
     if (e.evt.shiftKey) {
@@ -74,8 +73,8 @@ const DrawingBoard = () => {
       style={{
         display: "flex",
         flexDirection: "column",
-        gap: 6,
         position: "relative",
+        backgroundColor: 'white'
       }}
     >
       <Stage
@@ -88,7 +87,6 @@ const DrawingBoard = () => {
         onMouseLeave={() => setIsCursorInside(false)}
         style={{
           border: "1px solid #ccc",
-          borderRadius: 20,
           cursor: isCursorInside ? "none" : "default",
         }}
       >
@@ -131,9 +129,7 @@ const DrawingBoard = () => {
           )}
         </Layer>
       </Stage>
-      <div
-        style={{ marginBottom: 10, display: "flex", alignItems: "flex-start" }}
-      >
+      <div style={{ display: "flex", alignItems: "flex-start" }}>
         {/* Color grid */}
         <div
           style={{
@@ -142,18 +138,6 @@ const DrawingBoard = () => {
           }}
         >
           {AppColors.colors.map((c, i) => {
-            const isFirst = i === 0;
-            const isTopRight = i === numColumn - 1;
-            const isBottomLeft = i === AppColors.colors.length - numColumn;
-            const isBottomRight = i === AppColors.colors.length - 1;
-
-            const borderRadius = {
-              borderTopLeftRadius: isFirst ? 4 : 0,
-              borderTopRightRadius: isTopRight ? 4 : 0,
-              borderBottomLeftRadius: isBottomLeft ? 4 : 0,
-              borderBottomRightRadius: isBottomRight ? 4 : 0,
-            };
-
             return (
               <button
                 key={c}
@@ -167,7 +151,6 @@ const DrawingBoard = () => {
                   margin: 0,
                   cursor: "pointer",
                   outline: "none",
-                  ...borderRadius,
                 }}
                 title={c}
               />
@@ -179,7 +162,6 @@ const DrawingBoard = () => {
         <div
           style={{
             position: "absolute",
-            bottom: 8,
             right: 0,
             display: "flex",
             gap: 8,

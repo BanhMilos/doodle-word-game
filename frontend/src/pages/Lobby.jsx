@@ -47,6 +47,7 @@ export default function Lobby() {
     const onConnect = () => {
       console.log("connected with id", socket.id);
     };
+    
     const noRoomAvailable = ({ message }) => {
       alert(message);
     };
@@ -76,7 +77,6 @@ export default function Lobby() {
         setUser(username, name, avatars[avatarIndex]);
         socket.emit("joinRoom", { username: name, roomId });
       } catch (error) {
-        console.log("LOG : wtf");
         console.log(error);
         return alert(error);
       } finally {

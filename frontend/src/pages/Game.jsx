@@ -11,6 +11,7 @@ export default function Game() {
   const [messages, setMessages] = useState([]);
   const [msg, setMsg] = useState("");
   const [currentRoomId, setCurrentRoomId] = useState("");
+  const [isGameStart, setIsGameStart] = useState(false);
   const [settings, setSettings] = useState({
     roomName: "",
     players: 8,
@@ -27,6 +28,7 @@ export default function Game() {
   };
 
   const handleCreateRoom = () => {
+    console.log(`${playerName} create room`);
     socket.emit("createRoom", {
       username: playerName,
       roomName: settings.roomName,
@@ -40,20 +42,15 @@ export default function Game() {
   };
 
   const handleGameStart = () => {
-    socket.emit("createRoom", {
-      username: playerName,
-      roomName: settings.roomName,
-      occupancy: settings.players,
-      maxRound: settings.rounds,
-      turnsPerRound: settings.turns,
-      wordsCount: settings.wordCount,
-      drawTime: settings.drawTime,
-      hints: settings.hints,
+    socket.emit("startTurn", {
+      roomId: currentRoomId
     });
+    setIsGameStart(true);
   };
 
   useEffect(() => {
     socket.on("approveJoin", (data) => {
+      console.log(`LOG ; approve : ${players.length} ${JSON.stringify(data)}`);
       setCurrentRoomId(data.roomId);
       setPlayers((prev) => [
         ...prev,
@@ -64,8 +61,10 @@ export default function Game() {
           score: 0,
         },
       ]);
+      console.log(`LOG ; approve : ${players.length} ${data.username}`);
     });
     const handleGetRoomData = (data) => {
+      console.log(`LOG : getRoomData called ${JSON.stringify(data)}`);
       setCurrentRoomId(data.roomId);
       setPlayers(
         data.existingPlayers.map((player) => ({
@@ -83,8 +82,9 @@ export default function Game() {
     return () => {
       socket.off("approveJoin");
       socket.off("chatMessage");
+      socket.off("getRoomData", handleGetRoomData);
     };
-  });
+  }, []);
 
   const sendMessage = () => {
     socket.emit("chatMessage", {
@@ -142,11 +142,12 @@ export default function Game() {
         <div id="game-players-footer"></div>
         <div id="game-canvas">
           <DrawingBoard />
-          <div className="overlay"></div>
-          <div className="overlay-content" style={{ top: "0%" }}>
+          <div className={`overlay ${isGameStart ? "hidden" : ""}`} style={{display:isGameStart ? 'none' : 'block'}}></div>
+          <div className={`overlay-content ${isGameStart ? "hidden" : ""}`} style={{ top: "0%", display:isGameStart ? 'none' : 'block'}}>
             <div className="room show">
               <div className="settings-form">
                 <div className="key">
+                  <img src={AppImages.Name} />
                   <span data-translate="text">Roomname :</span>
                 </div>
                 <div className="value">
@@ -285,7 +286,7 @@ export default function Game() {
                 <button onClick={handleCreateRoom}>
                   Create
                 </button>
-                <button onClick={handleGameStart}>
+                <button onClick={handleGameStart} disabled={players.length >= 2 ? false : true}>
                   Start
                 </button>
               </div>

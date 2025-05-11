@@ -38,7 +38,6 @@ const Login = () => {
 
   return (
     <div id="home">
-      
       <img src={AppImages.Logo} alt="Logo" className="logo" />
       <div className="form-container">
         <div className="form-group">
@@ -60,7 +59,7 @@ const Login = () => {
           />
         </div>
         <div className="button-group">
-          <button className="login-btn" onClick={handleLogin}>
+          <button className="confirm-btn" onClick={handleLogin}>
             Login
           </button>
           <button className="register-btn" onClick={switchToRegister}>
