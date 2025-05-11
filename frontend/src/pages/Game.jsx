@@ -4,8 +4,10 @@ import "../styles/room.css";
 import socket from "../utils/socket";
 import AppImages from "core/constants/AppImages";
 import DrawingBoard from "components/DrawingBoard";
+import LoadingSpinner from "components/LoadingIndicator";
 
 export default function Game() {
+  const [loading, setLoading] = useState(true);
   const { playerName } = useStore();
   const [players, setPlayers] = useState([]);
   const [messages, setMessages] = useState([]);
@@ -74,6 +76,7 @@ export default function Game() {
           score: player.score,
         }))
       );
+      setLoading(false); 
     };
 
     socket.on("getRoomData", handleGetRoomData);
@@ -97,6 +100,7 @@ export default function Game() {
 
   return (
     <div id="game-room">
+      {loading && <LoadingSpinner/>}
       <div id="game-wrapper">
         <div id="game-logo">
           <img src={AppImages.Logo} alt="Logo" />
