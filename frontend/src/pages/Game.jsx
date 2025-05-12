@@ -58,6 +58,7 @@ export default function Game() {
   };
 
   const handleStartGame = () => {
+    console.log("LOG : handleStartGame");
     socket.emit("startTurn", {
       roomId: currentRoomId,
     });
@@ -65,7 +66,9 @@ export default function Game() {
 
   const handleChooseWord = (word) => {
     setIsChooseWord(false);
-    handleSettingChange("guessingWord", word);
+    console.log(
+      `LOG : handleChooseWord ${currentRoomId} ${word} ${playerName}`
+    );
     socket.emit("startGuessing", {
       roomId: currentRoomId,
       word: word,
@@ -76,6 +79,7 @@ export default function Game() {
 
   useEffect(() => {
     socket.on("approveJoin", (data) => {
+      console.log(`LOG ; approve : ${players.length} ${JSON.stringify(data)}`);
       setCurrentRoomId(data.roomId);
       setPlayers((prev) => [
         ...prev,
@@ -86,9 +90,11 @@ export default function Game() {
           score: 0,
         },
       ]);
+      console.log(`LOG ; approve player : ${players.length} ${data.username}`);
     });
 
-    socket.on("getRoomData", (data) => {
+    const handleGetRoomData = (data) => {
+      console.log(`LOG : getRoomData called ${JSON.stringify(data)}`);
       setCurrentRoomId(data.roomId);
       setPlayers(
         data.existingPlayers.map((player) => ({
@@ -99,14 +105,17 @@ export default function Game() {
         }))
       );
       setLoading(false);
-    });
+    };
 
+    socket.on("getRoomData", handleGetRoomData);
     socket.on("chatMessage", (data) => setMessages((prev) => [...prev, data]));
-
     socket.on("startTurn", (data) => {
       setIsGameStart(true);
       handleSettingChange("drawingPlayer", data.username);
       setDisableTool(playerName !== data.username);
+      console.log(`LOG : ${data.username} ${playerName}`);
+      console.log(`LOG : ${data.username === playerName}`);
+      console.log(`LOG : disableTool ${disableTool}`);
       setMessages((prev) => [
         ...prev,
         {
@@ -122,22 +131,25 @@ export default function Game() {
           roomId: currentRoomId,
         });
     });
-
     socket.on("chooseWord", (data) => {
       if (data.username === playerName) {
         handleSettingChange("words", data.words);
         setIsChooseWord(true);
       }
+      console.log(`LOG : chooseWord ${JSON.stringify(data)}`);
       setMessages((prev) => [
         ...prev,
         {
           username: "System",
-          message: `${data.username} is choosing a word`,
+          message: `${data.username} are choosing words`,
         },
       ]);
     });
-
     socket.on("startGuessing", (data) => {
+      console.log(
+        `LOG : startGuessing ${playerName} ${data.username} ${data.word}`
+      );
+      handleSettingChange("guessingWord", data.word);
       setMessages((prev) => [
         ...prev,
         {
@@ -146,11 +158,9 @@ export default function Game() {
         },
       ]);
     });
-
     socket.on("drawTime", (data) => {
       setTimer(data.drawTime);
     });
-
     socket.on("guessingTimeOver", (data) => {
       setMessages((prev) => [
         ...prev,
@@ -160,29 +170,17 @@ export default function Game() {
         },
       ]);
     });
-
-    socket.on("endTurn", (data) => {
-      const { drawingPlayer, correctPlayers, currentWord, scores } = data;
-      setMessages((prev) => [
-        ...prev,
-        {
-          username: "System",
-          message:
-            `Turn ended. Word was "${currentWord}".\n` +
-            Object.entries(scores)
-              .map(([user, pts]) => `${user}: +${pts}`)
-              .join(", "),
-        },
-      ]);
-      setPlayers((prev) =>
-        prev.map((p) => ({
-          ...p,
-          score: (p.score || 0) + (scores[p.username] || 0),
-        }))
+    socket.on("guessedCorrectly", (data) => {
+      console.log(`LOG : guessedCorrectly ${JSON.stringify(data)}`);
+      setPlayers((prevPlayers) =>
+        prevPlayers.map((player) =>
+          player.username === data.username
+            ? { ...player, score: data.score }
+            : player
+        )
       );
     });
-
-    socket.on("gameOver", () => {
+    socket.on("gameOver", (data) => {
       handleSettingChange("words", []);
       handleSettingChange("guessingWord", "");
       handleSettingChange("drawingPlayer", "");
@@ -190,12 +188,12 @@ export default function Game() {
         ...prev,
         {
           username: "System",
-          message: `Game over!`,
+          message: `Game over!!!!!!!!!`,
         },
       ]);
     });
-
     socket.on("leaderboard", (data) => {
+      console.log(JSON.stringify(data));
       setMessages((prev) => [
         ...prev,
         {
@@ -213,7 +211,6 @@ export default function Game() {
         },
       ]);
     });
-
     socket.emit("getRoomData", { username: playerName });
     return () => {
       socket.off("approveJoin");
@@ -226,7 +223,6 @@ export default function Game() {
       socket.off("guessingTimeOver");
       socket.off("gameOver");
       socket.off("leaderboard");
-      socket.off("endTurn");
     };
   }, []);
 
@@ -238,10 +234,12 @@ export default function Game() {
     if (!msg) return;
     if (msg.trim() === settings.guessingWord) {
       if (canChat) {
+        console.log("LOG : client called guessedCorrectly");
         socket.emit("guessedCorrectly", {
           username: playerName,
           roomId: currentRoomId,
           message: msg,
+          timer: timer,
         });
         setCanChat(false);
         setMsg("");
@@ -279,7 +277,7 @@ export default function Game() {
           </div>
           <div id="game-word">
             <div className="description">
-              {settings.drawingPlayer === ""
+              {!settings.guessingWord
                 ? "Waiting"
                 : playerName === settings.drawingPlayer
                 ? settings.guessingWord
@@ -303,7 +301,7 @@ export default function Game() {
                   {p.username}
                   {p.username === playerName && " (You)"}
                 </span>
-                <span className="player-score">{p.score}</span>
+                <span className="player-score">{p.score ?? 0}</span>
                 <span
                   className={`status ${
                     p.username === "Ayush Sharma" ? "drawing" : "guessed"
