@@ -66,7 +66,9 @@ export default function Game() {
 
   const handleChooseWord = (word) => {
     setIsChooseWord(false);
-    console.log(`LOG : handleChooseWord ${currentRoomId} ${word} ${playerName}`);
+    console.log(
+      `LOG : handleChooseWord ${currentRoomId} ${word} ${playerName}`
+    );
     handleSettingChange("guessingWord", word);
     socket.emit("startGuessing", {
       roomId: currentRoomId,
@@ -112,8 +114,8 @@ export default function Game() {
       setIsGameStart(true);
       handleSettingChange("drawingPlayer", data.username);
       setDisableTool(playerName !== data.username);
-      console.log(`LOG : ${data.username} ${playerName}`);  
-      console.log(`LOG : ${data.username === playerName}`);  
+      console.log(`LOG : ${data.username} ${playerName}`);
+      console.log(`LOG : ${data.username === playerName}`);
       console.log(`LOG : disableTool ${disableTool}`);
       setMessages((prev) => [
         ...prev,
@@ -131,7 +133,6 @@ export default function Game() {
         });
     });
     socket.on("chooseWord", (data) => {
-      
       if (data.username === playerName) {
         handleSettingChange("words", data.words);
         setIsChooseWord(true);
@@ -167,7 +168,16 @@ export default function Game() {
         },
       ]);
     });
-
+    socket.on("guessedCorrectly", (data) => {
+      console.log(`LOG : guessedCorrectly ${JSON.stringify(data)}`)
+      setPlayers((prevPlayers) =>
+        prevPlayers.map((player) =>
+          player.username === data.username
+            ? { ...player, score: data.score }
+            : player
+        )
+      );
+    });
     socket.on("gameOver", (data) => {
       handleSettingChange("words", []);
       handleSettingChange("guessingWord", "");
@@ -222,10 +232,12 @@ export default function Game() {
     if (!msg) return;
     if (msg.trim() === settings.guessingWord) {
       if (canChat) {
+        console.log("LOG : client called guessedCorrectly");
         socket.emit("guessedCorrectly", {
           username: playerName,
           roomId: currentRoomId,
-          score: (timer / settings.drawTime) * 1000,
+          message: msg,
+          timer: timer,
         });
         setCanChat(false);
         setMsg("");
@@ -287,7 +299,7 @@ export default function Game() {
                   {p.username}
                   {p.username === playerName && " (You)"}
                 </span>
-                <span className="player-score">0</span>
+                <span className="player-score">{p.score ?? 0}</span>
                 <span
                   className={`status ${
                     p.username === "Ayush Sharma" ? "drawing" : "guessed"

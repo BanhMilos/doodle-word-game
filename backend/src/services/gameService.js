@@ -127,10 +127,11 @@ const guessedCorrectly = async ({ username, roomId, message, timer }, io) => {
 
       //tính điểm
       const drawTime = roomData.drawTime || 60; 
-      const score = Math.round((timer / drawTime) * 1000);
+      let score = Math.round((timer / drawTime) * 1000);
 
       if (!roomData.scores[username]) roomData.scores[username] = 0;
       roomData.scores[username] += score;
+      score = roomData.scores[username];
 
       await redis.set(`room:${roomId}`, JSON.stringify(roomData));
       io.to(roomId).emit("guessedCorrectly", { username, score });
