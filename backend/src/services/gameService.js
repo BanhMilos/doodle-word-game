@@ -35,6 +35,7 @@ const startTurn = async ({ roomId }, io) => {
   roomData.drawingPlayer = username;
   roomData.drawings = [];
   roomData.currentWord = "";
+  roomData.turnEnded = false;
 
   io.to(roomId).emit("clearCanvas");
   io.to(roomId).emit("startTurn", {
@@ -58,8 +59,8 @@ const chooseWord = async ({ username, wordsCount, roomId }, io) => {
 const startGuessing = async ({ roomId, word, username, drawTime }, io) => {
   let roomData = await redis.get(`room:${roomId}`);
   roomData = JSON.parse(roomData);
+  roomData.turnEnded = false;
   roomData.drawTime = drawTime;
-  
   roomData.currentWord = word;
   await redis.set(`room:${roomId}`, JSON.stringify(roomData));
   
@@ -71,6 +72,16 @@ const startGuessing = async ({ roomId, word, username, drawTime }, io) => {
       io.to(roomId).emit("drawTime", { drawTime });
       if (drawTime === 0) {
         clearInterval(interval);
+
+        let roomData = await redis.get(`room:${roomId}`);
+        roomData = JSON.parse(roomData);
+
+        if (!roomData.turnEnded) {
+         roomData.turnEnded = true;
+          await redis.set(`room:${roomId}`, JSON.stringify(roomData));
+          await endTurn({ roomId }, io);
+        }
+
         io.to(roomId).emit("guessingTimeOver", { word });
         resolve(); 
       }
@@ -134,21 +145,30 @@ const guessedCorrectly = async ({ username, roomId, message, timer }, io) => {
 
       await redis.set(`room:${roomId}`, JSON.stringify(roomData));
       io.to(roomId).emit("guessedCorrectly", { username, score });
+
+      const allGuessed =
+      roomData.guessedCorrectlyPeople.length === roomData.players.length - 1; // -1 vì người vẽ không đoán
+
+      if (allGuessed && !roomData.turnEnded) {  //điều kiện endturn 
+        roomData.turnEnded = true;
+        await redis.set(`room:${roomId}`, JSON.stringify(roomData));
+        await endTurn({ roomId }, io);
+        return;
+      }
     }
   }
 };
 
 
-const endTurn = async ({ roomId, username, score }, io) => {
+const endTurn = async ({ roomId }, io) => {
   let roomData = await redis.get(`room:${roomId}`);
   roomData = JSON.parse(roomData);
-
-  if (roomData.scores[username]) roomData.scores[username] += score;
-  else roomData.scores[username] = score;
-
+  if (roomData.turnEnded) return;
+  roomData.turnEnded = true;
   await redis.set(`room:${roomId}`, JSON.stringify(roomData));
-  io.to(roomId).emit("endTurn", { username, score });
+  io.to(roomId).emit("endTurn");
 };
+
 
 const gameOver = async ({ roomId, username, score }, io) => {
   const player = await Player.findOne({ username });
