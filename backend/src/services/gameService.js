@@ -58,6 +58,7 @@ const chooseWord = async ({ username, wordsCount, roomId }, io) => {
 const startGuessing = async ({ roomId, word, username, drawTime }, io) => {
   let roomData = await redis.get(`room:${roomId}`);
   roomData = JSON.parse(roomData);
+  roomData.drawTime = drawTime;
   
   roomData.currentWord = word;
   await redis.set(`room:${roomId}`, JSON.stringify(roomData));
@@ -112,7 +113,7 @@ const drawing = async ({ roomId, username, drawingData }, io) => {
   }
 };
 
-const guessedCorrectly = async ({ username, roomId, message }, io) => {
+const guessedCorrectly = async ({ username, roomId, message, timer }, io) => {
   let roomData = await redis.get(`room:${roomId}`);
   roomData = JSON.parse(roomData);
 
@@ -123,11 +124,20 @@ const guessedCorrectly = async ({ username, roomId, message }, io) => {
   ) {
     if (!roomData.guessedCorrectlyPeople.includes(username)) {
       roomData.guessedCorrectlyPeople.push(username);
+
+      //tính điểm
+      const drawTime = roomData.drawTime || 60; 
+      const score = Math.round((timer / drawTime) * 1000);
+
+      if (!roomData.scores[username]) roomData.scores[username] = 0;
+      roomData.scores[username] += score;
+
       await redis.set(`room:${roomId}`, JSON.stringify(roomData));
-      io.to(roomId).emit("guessedCorrectly", { username });
+      io.to(roomId).emit("guessedCorrectly", { username, score });
     }
   }
 };
+
 
 const endTurn = async ({ roomId, username, score }, io) => {
   let roomData = await redis.get(`room:${roomId}`);
