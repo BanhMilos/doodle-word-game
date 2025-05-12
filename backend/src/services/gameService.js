@@ -25,7 +25,7 @@ const startTurn = async ({ roomId }, io) => {
     const playerId = players[Math.floor(Math.random() * players.length)];
     const player = await Player.findById(playerId);
     if (!player) {
-      console.error("⚠️ Player not found for ID:", playerId);
+      console.error(" Player not found for ID:", playerId);
       return;
     }
     username = player.username;
@@ -57,36 +57,39 @@ const chooseWord = async ({ username, wordsCount, roomId }, io) => {
 
 const startGuessing = async ({ roomId, word, username, drawTime }, io) => {
   let roomData = await redis.get(`room:${roomId}`);
+  if (!roomData) return;
+
   roomData = JSON.parse(roomData);
-  
+
   roomData.currentWord = word;
+  roomData.drawTimeLeft = drawTime; 
   await redis.set(`room:${roomId}`, JSON.stringify(roomData));
-  
+
   console.log(`LOG : startGuessing run ${roomId} ${word} ${username} ${drawTime}`);
   io.to(roomId).emit("startGuessing", { username });
+
   const waitForDrawTime = new Promise((resolve) => {
     const interval = setInterval(async () => {
       drawTime -= 1;
+
+      //cập nhật drawTimeLeft
+      roomData.drawTimeLeft = drawTime;
+      await redis.set(`room:${roomId}`, JSON.stringify(roomData));
+
       io.to(roomId).emit("drawTime", { drawTime });
+
       if (drawTime === 0) {
         clearInterval(interval);
         io.to(roomId).emit("guessingTimeOver", { word });
-        resolve(); 
+        resolve();
       }
     }, 1000);
   });
 
   await waitForDrawTime;
-
-  if (
-    roomData.turn === roomData.turnsPerRound &&
-    roomData.round === roomData.maxRound
-  ) {
-    io.to(roomId).emit("gameOver", { message: "Game Over" });
-  } else {
-    await startTurn({ roomId }, io);
-  }
+  await endTurn({ roomId }, io); 
 };
+
 
 const drawing = async ({ roomId, username, drawingData }, io) => {
   //console.log(`LOG : drawing fired ${roomId} ${username}`)
@@ -113,32 +116,98 @@ const drawing = async ({ roomId, username, drawingData }, io) => {
 };
 
 const guessedCorrectly = async ({ username, roomId, message }, io) => {
-  let roomData = await redis.get(`room:${roomId}`);
-  roomData = JSON.parse(roomData);
+  try {
+    let roomData = await redis.get(`room:${roomId}`);
+    if (!roomData) return;
 
-  if (roomData.drawingPlayer === username) return;
+    roomData = JSON.parse(roomData);
+    if (roomData.drawingPlayer === username) return;
+    if (!roomData.currentWord) return;
 
-  if (
-    message.trim().toLowerCase() === roomData.currentWord.trim().toLowerCase()
-  ) {
-    if (!roomData.guessedCorrectlyPeople.includes(username)) {
-      roomData.guessedCorrectlyPeople.push(username);
-      await redis.set(`room:${roomId}`, JSON.stringify(roomData));
-      io.to(roomId).emit("guessedCorrectly", { username });
+    const answer = roomData.currentWord.trim().toLowerCase();
+    const guess = message.trim().toLowerCase();
+
+    if (guess === answer) {
+      roomData.guessedCorrectlyPeople = roomData.guessedCorrectlyPeople || [];
+
+      if (!roomData.guessedCorrectlyPeople.includes(username)) {
+        roomData.guessedCorrectlyPeople.push(username);
+        await redis.set(`room:${roomId}`, JSON.stringify(roomData));
+
+        io.to(roomId).emit("guessedCorrectly", { username , score });
+      }
     }
+  } catch (err) {
+    console.error(`[guessedCorrectly] error in room ${roomId}:`, err);
   }
 };
 
-const endTurn = async ({ roomId, username, score }, io) => {
-  let roomData = await redis.get(`room:${roomId}`);
-  roomData = JSON.parse(roomData);
 
-  if (roomData.scores[username]) roomData.scores[username] += score;
-  else roomData.scores[username] = score;
+const endTurn = async ({ roomId }, io) => {
+  try {
+    console.log(` [endTurn]running for room: ${roomId}`);
 
-  await redis.set(`room:${roomId}`, JSON.stringify(roomData));
-  io.to(roomId).emit("endTurn", { username, score });
+    let roomData = await redis.get(`room:${roomId}`);
+    if (!roomData) {
+      console.error(`[endTurn] no room data found for ${roomId}`);
+      return;
+    }
+
+    roomData = JSON.parse(roomData);
+
+    const correctPlayers = roomData.guessedCorrectlyPeople || [];
+    const drawingPlayer = roomData.drawingPlayer;
+    const currentWord = roomData.currentWord;
+    const totalTime = roomData.drawTime || 60;
+    const timeLeft = roomData.drawTimeLeft || 0;
+
+    const scores = {};
+
+    //cộng điểm cho người đoán đúng
+    for (const username of correctPlayers) {
+      const score = Math.floor((timeLeft / totalTime) * 100);
+      roomData.scores[username] = (roomData.scores[username] || 0) + score;
+      scores[username] = score;
+    }
+
+    //cộng điểm cho người vẽ nếu có người đoán đúng
+    if (correctPlayers.length > 0) {
+      const drawerBonus = 50;
+      roomData.scores[drawingPlayer] = (roomData.scores[drawingPlayer] || 0) + drawerBonus;
+      scores[drawingPlayer] = drawerBonus;
+    }
+
+    io.to(roomId).emit("endTurn", {
+      drawingPlayer,
+      correctPlayers,
+      currentWord,
+      scores, // tổng hợp tất cả điểm mới được cộng
+    });
+
+    // reset lượt
+    roomData.drawingPlayer = "";
+    roomData.guessedCorrectlyPeople = [];
+    roomData.currentWord = "";
+    roomData.drawTimeLeft = 0;
+    roomData.drawings = [];
+
+    await redis.set(`room:${roomId}`, JSON.stringify(roomData));
+
+    //kiểm tra kết thúc game
+    if (
+      roomData.turn === roomData.turnsPerRound &&
+      roomData.round === roomData.maxRound
+    ) {
+      io.to(roomId).emit("gameOver", { scores: roomData.scores });
+    } else {
+      await startTurn({ roomId }, io);
+    }
+  } catch (err) {
+    console.error(`[endTurn] error in room ${roomId}:`, err);
+  }
 };
+
+
 
 const gameOver = async ({ roomId, username, score }, io) => {
   const player = await Player.findOne({ username });
