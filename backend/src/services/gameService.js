@@ -210,7 +210,7 @@ const handlePlayerLeave = async ({ roomId, username }, io) => {
     roomData.drawingPlayer = "";
     roomData.currentWord = "";
     roomData.drawings = [];
-
+    roomData.turnEnded = true;
     await redis.set(`room:${roomId}`, JSON.stringify(roomData));
 
     io.to(roomId).emit("turnEndedDueToDrawerLeave", {
