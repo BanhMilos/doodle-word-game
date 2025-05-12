@@ -64,7 +64,7 @@ const startGuessing = async ({ roomId, word, username, drawTime }, io) => {
   await redis.set(`room:${roomId}`, JSON.stringify(roomData));
   
   console.log(`LOG : startGuessing run ${roomId} ${word} ${username} ${drawTime}`);
-  io.to(roomId).emit("startGuessing", { username });
+  io.to(roomId).emit("startGuessing", { username, word});
   const waitForDrawTime = new Promise((resolve) => {
     const interval = setInterval(async () => {
       drawTime -= 1;

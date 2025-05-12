@@ -69,7 +69,6 @@ export default function Game() {
     console.log(
       `LOG : handleChooseWord ${currentRoomId} ${word} ${playerName}`
     );
-    handleSettingChange("guessingWord", word);
     socket.emit("startGuessing", {
       roomId: currentRoomId,
       word: word,
@@ -147,7 +146,10 @@ export default function Game() {
       ]);
     });
     socket.on("startGuessing", (data) => {
-      console.log(`LOG : startGuessing ${playerName} ${data.username}`);
+      console.log(
+        `LOG : startGuessing ${playerName} ${data.username} ${data.word}`
+      );
+      handleSettingChange("guessingWord", data.word);
       setMessages((prev) => [
         ...prev,
         {
@@ -169,7 +171,7 @@ export default function Game() {
       ]);
     });
     socket.on("guessedCorrectly", (data) => {
-      console.log(`LOG : guessedCorrectly ${JSON.stringify(data)}`)
+      console.log(`LOG : guessedCorrectly ${JSON.stringify(data)}`);
       setPlayers((prevPlayers) =>
         prevPlayers.map((player) =>
           player.username === data.username
@@ -275,7 +277,7 @@ export default function Game() {
           </div>
           <div id="game-word">
             <div className="description">
-              {settings.drawingPlayer === ""
+              {!settings.guessingWord
                 ? "Waiting"
                 : playerName === settings.drawingPlayer
                 ? settings.guessingWord
