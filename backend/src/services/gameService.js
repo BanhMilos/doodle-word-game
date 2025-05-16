@@ -7,7 +7,7 @@ const startTurn = async ({ roomId }, io) => {
   console.log(`LOG : startTurn run ${roomId}`);
   let roomData = await redis.get(`room:${roomId}`);
   roomData = JSON.parse(roomData);
-
+  roomData.isPlaying = true;
   if (roomData.turn === roomData.turnsPerRound) {
     roomData.round += 1;
     roomData.turn = 0;

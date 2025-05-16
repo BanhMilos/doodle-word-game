@@ -50,6 +50,7 @@ const createRoom = async (
     [username]: 0,
   },
     existingPlayers: [player],
+    isPlaying: false,
     createdAt: Date.now(),
   };
   await redis.set(`room:${roomId}`, JSON.stringify(roomData));
