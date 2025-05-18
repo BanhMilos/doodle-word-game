@@ -9,7 +9,7 @@ import WordSelect from "components/WordSelect";
 
 export default function Game() {
   const [loading, setLoading] = useState(true);
-  const { playerName } = useStore();
+  const { playerName, isHost } = useStore();
   const messagesEndRef = useRef(null);
   const [players, setPlayers] = useState([]);
   const [messages, setMessages] = useState([]);
@@ -211,7 +211,7 @@ export default function Game() {
         },
       ]);
     });
-    socket.emit("getRoomData", { username: playerName });
+    if (!isHost) socket.emit("getRoomData", { username: playerName });
     return () => {
       socket.off("approveJoin");
       socket.off("chatMessage");
