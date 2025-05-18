@@ -144,6 +144,7 @@ const joinRoom = async ({ username, roomId }, socket, io) => {
 };
 
 const getRoomData = async ({ username, roomId }, socket) => {
+  console.log("getRoomData", roomId);
   if (roomId) {
     let roomData = await redis.get(`room:${roomId}`);
     roomData = JSON.parse(roomData);

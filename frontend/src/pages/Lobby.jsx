@@ -146,7 +146,7 @@ export default function Lobby() {
         {/* Input mới cho Room ID */}
         <input
           value={roomId}
-          onChange={(e) => setRoomId(e.target.value)}
+          onChange={(e) => setRoomId(e.target.value.trim())}
           placeholder="Enter Room ID (optional)"
           className="room-input"
         />
