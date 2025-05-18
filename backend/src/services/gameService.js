@@ -60,34 +60,90 @@ const startGuessing = async ({ roomId, word, username, drawTime }, io) => {
   let roomData = await redis.get(`room:${roomId}`);
   roomData = JSON.parse(roomData);
   roomData.drawTime = drawTime;
-  
   roomData.currentWord = word;
   await redis.set(`room:${roomId}`, JSON.stringify(roomData));
   
   console.log(`LOG : startGuessing run ${roomId} ${word} ${username} ${drawTime}`);
-  io.to(roomId).emit("startGuessing", { username, word});
-  const waitForDrawTime = new Promise((resolve) => {
-    const interval = setInterval(async () => {
-      drawTime -= 1;
-      io.to(roomId).emit("drawTime", { drawTime });
-      if (drawTime === 0) {
-        clearInterval(interval);
-        io.to(roomId).emit("guessingTimeOver", { word });
-        resolve(); 
-      }
-    }, 1000);
-  });
+  
+  const wordLength = word.length;
+  let maskedWord = Array(wordLength).fill("_");
+  let revealedIndexes = new Set();
+  const totalHints = roomData.hints || 0;
+  const interval = Math.floor(drawTime / (totalHints + 1));
+  let remainingTime = drawTime;
 
-  await waitForDrawTime;
-
-  if (
-    roomData.turn === roomData.turnsPerRound &&
-    roomData.round === roomData.maxRound
-  ) {
-    io.to(roomId).emit("gameOver", { message: "Game Over" });
-  } else {
-    await startTurn({ roomId }, io);
+  const drawer = await Player.findOne({ username });
+  if (drawer) {
+    io.to(drawer.socketID).emit("startGuessing", {
+      username,
+      word, // người vẽ thấy toàn bộ từ
+      isDrawer: true,
+    });
   }
+
+  // Gửi chuỗi bị ẩn ban đầu cho người đoán
+  for (const playerId of roomData.players) {
+    const player = await Player.findById(playerId);
+    if (!player || player.username === username) continue;
+    io.to(player.socketID).emit("startGuessing", {
+      username,
+      hint: maskedWord.join(" "),
+      isDrawer: false,
+    });
+  }
+
+  // Gửi hint định kỳ
+  let hintCount = 0;
+  const intervalId = setInterval(async () => {
+    remainingTime -= interval;
+    if (hintCount >= totalHints) {
+      clearInterval(intervalId);
+      return;
+    }
+
+    // Chọn ngẫu nhiên 1 vị trí chưa mở
+    let unrevealed = [];
+    for (let i = 0; i < wordLength; i++) {
+      if (!revealedIndexes.has(i)) unrevealed.push(i);
+    }
+    if (unrevealed.length === 0) {
+      clearInterval(intervalId);
+      return;
+    }
+
+    const randomIndex = unrevealed[Math.floor(Math.random() * unrevealed.length)];
+    maskedWord[randomIndex] = word[randomIndex];
+    revealedIndexes.add(randomIndex);
+    hintCount++;
+
+    // Gửi hint cập nhật đến người đoán
+    for (const playerId of roomData.players) {
+      const player = await Player.findById(playerId);
+      if (!player || player.username === username) continue;
+      io.to(player.socketID).emit("updateHint", {
+        hint: maskedWord.join(" "),
+      });
+    }
+  }, interval * 1000);
+
+  // Thời gian đếm ngược
+  const countdown = setInterval(() => {
+    remainingTime--;
+    io.to(roomId).emit("drawTime", { drawTime: remainingTime });
+    if (remainingTime <= 0) {
+      clearInterval(countdown);
+      clearInterval(intervalId);
+      io.to(roomId).emit("guessingTimeOver", { word });
+      if (
+        roomData.turn === roomData.turnsPerRound &&
+        roomData.round === roomData.maxRound
+      ) {
+        io.to(roomId).emit("gameOver", { message: "Game Over" });
+      } else {
+        startTurn({ roomId }, io);
+      }
+    }
+  }, 1000);
 };
 
 const drawing = async ({ roomId, username, drawingData }, io) => {
