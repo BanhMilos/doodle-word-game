@@ -29,4 +29,20 @@ const getRoomData = async (data, socket) => {
     socket.emit("error", { message: "Error getting room data" });
   }
 }
-export default { createRoom, joinRoom, getRoomData };
+const updateRoom = async (data, io) => {
+  try {
+    await roomService.updateRoom(data, io);
+  } catch (error) {
+    console.log(error);
+    io.to(data.roomId).emit("error", { message: "Error updating room data" });
+  }
+}
+const leaveRoom = async (data, io) => {
+  try {
+    await roomService.leaveRoom(data, io);
+  } catch (error) {
+    console.log(error);
+    io.to(data.roomId).emit("error", { message: "Error leaving room" });
+  }
+}
+export default { createRoom, joinRoom, getRoomData, updateRoom, leaveRoom };
