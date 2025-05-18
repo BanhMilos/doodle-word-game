@@ -61,6 +61,8 @@ io.on("connection", (socket) => {
   socket.on("createRoom", (data) => roomController.createRoom(data, socket));
   socket.on("joinRoom", (data) => roomController.joinRoom(data, socket, io),);
   socket.on("getRoomData", (data) => roomController.getRoomData(data, socket));
+  socket.on("leaveRoom", (data) => roomController.leaveRoom(data, io));
+  socket.on("updateRoom", (data) => roomController.updateRoom(data, io));
 
   // Game
   socket.on("startTurn", (data) => gameController.startTurn(data, io));

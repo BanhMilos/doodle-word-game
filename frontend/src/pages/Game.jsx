@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import useStore from "../store";
 import "../styles/room.css";
 import socket from "../utils/socket";
@@ -9,7 +9,7 @@ import WordSelect from "components/WordSelect";
 
 export default function Game() {
   const [loading, setLoading] = useState(true);
-  const { playerName } = useStore();
+  const { playerName, isHost } = useStore();
   const messagesEndRef = useRef(null);
   const [players, setPlayers] = useState([]);
   const [messages, setMessages] = useState([]);
@@ -20,6 +20,7 @@ export default function Game() {
   const [currentRoomId, setCurrentRoomId] = useState("");
   const [isGameStart, setIsGameStart] = useState(false);
   const [disableTool, setDisableTool] = useState(true);
+  const [copied, setCopied] = useState(false);
   const [settings, setSettings] = useState({
     roomName: "",
     players: 8,
@@ -34,8 +35,16 @@ export default function Game() {
     drawingPlayer: "",
   });
 
-  const handleSettingChange = (key, value) => {
+  const handleSettingChange = useCallback((key, value) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
+  }, []);
+
+  const handleCopy = async () => {
+    if (currentRoomId) {
+      await navigator.clipboard.writeText(currentRoomId);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const handleCreateRoom = () => {
@@ -79,7 +88,6 @@ export default function Game() {
 
   useEffect(() => {
     socket.on("approveJoin", (data) => {
-      console.log(`LOG ; approve : ${players.length} ${JSON.stringify(data)}`);
       setCurrentRoomId(data.roomId);
       setPlayers((prev) => [
         ...prev,
@@ -94,7 +102,6 @@ export default function Game() {
     });
 
     const handleGetRoomData = (data) => {
-      console.log(`LOG : getRoomData called ${JSON.stringify(data)}`);
       setCurrentRoomId(data.roomId);
       setPlayers(
         data.existingPlayers.map((player) => ({
@@ -104,6 +111,8 @@ export default function Game() {
           score: player.score,
         }))
       );
+      console.log(`LOG : getRoomData called ${JSON.stringify(data)}`);
+      console.log(`LOG : getRoomData players ${data.existingPlayers.length} ${players.length}`);
       setLoading(false);
     };
 
@@ -211,7 +220,7 @@ export default function Game() {
         },
       ]);
     });
-    socket.emit("getRoomData", { username: playerName });
+    if (!isHost) socket.emit("getRoomData", { username: playerName });
     return () => {
       socket.off("approveJoin");
       socket.off("chatMessage");
@@ -224,7 +233,14 @@ export default function Game() {
       socket.off("gameOver");
       socket.off("leaderboard");
     };
-  }, []);
+  }, [
+    currentRoomId,
+    disableTool,
+    handleSettingChange,
+    playerName,
+    players.length,
+    settings.wordCount,
+  ]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -330,20 +346,39 @@ export default function Game() {
             <div className="room show">
               <div className="settings-form">
                 <div className="key">
-                  <img src={AppImages.Name} />
-                  <span data-translate="text">Roomname :</span>
+                  <img src={AppImages.Name} alt="" />
+                  <span data-translate="text">RoomId :</span>
                 </div>
-                <div className="value">
+                <div
+                  className="value"
+                  style={{ position: "relative", display: "inline-block" }}
+                >
+                  {copied && (
+                    <span
+                      style={{
+                        position: "absolute",
+                        left: "-60px",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        fontSize: "12px",
+                        color: "white",
+                      }}
+                    >
+                      Copied!
+                    </span>
+                  )}
                   <input
                     type="text"
-                    value={settings.roomName}
-                    onChange={(e) =>
-                      handleSettingChange("roomName", e.target.value)
-                    }
+                    readOnly
+                    value={currentRoomId || ""}
+                    onClick={handleCopy}
+                    style={{
+                      cursor: currentRoomId ? "pointer" : "not-allowed",
+                    }}
                   />
                 </div>
                 <div className="key">
-                  <img src={AppImages.Player} />
+                  <img src={AppImages.Player} alt="" />
                   <span data-translate="text">Players</span>
                 </div>
                 <div className="value">
@@ -361,7 +396,7 @@ export default function Game() {
                   </select>
                 </div>
                 <div className="key">
-                  <img src={AppImages.Language} />
+                  <img src={AppImages.Language} alt="" />
                   <label>Language</label>
                 </div>
                 <div className="value">
@@ -376,7 +411,7 @@ export default function Game() {
                   </select>
                 </div>
                 <div className="key">
-                  <img src={AppImages.DrawTime} />
+                  <img src={AppImages.DrawTime} alt="" />
                   <label>Draw time</label>
                 </div>
                 <div className="value">
@@ -394,7 +429,7 @@ export default function Game() {
                   </select>
                 </div>
                 <div className="key">
-                  <img src={AppImages.Round} />
+                  <img src={AppImages.Round} alt="" />
                   <label>Rounds</label>
                 </div>
                 <div className="value">
@@ -412,7 +447,7 @@ export default function Game() {
                   </select>
                 </div>
                 <div className="key">
-                  <img src={AppImages.WordCount} />
+                  <img src={AppImages.WordCount} alt="" />
                   <label>Word Count</label>
                 </div>
                 <div className="value">
@@ -430,7 +465,7 @@ export default function Game() {
                   </select>
                 </div>
                 <div className="key">
-                  <img src={AppImages.Hints} />
+                  <img src={AppImages.Hints} alt="" />
                   <label>Hints</label>
                 </div>
                 <div className="value">
@@ -452,7 +487,7 @@ export default function Game() {
                 <button onClick={handleCreateRoom}>Create</button>
                 <button
                   onClick={handleStartGame}
-                  disabled={players.length >= 2 ? false : true}
+                  disabled={players.length < 2 || playerName !== players[0].username}
                 >
                   Start
                 </button>

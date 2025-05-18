@@ -37,6 +37,7 @@ const startTurn = async ({ roomId }, io) => {
   roomData.currentWord = "";
 
   io.to(roomId).emit("clearCanvas");
+  console.log(`LOG : startTurn emit clearCanvas ${roomId}`);
   io.to(roomId).emit("startTurn", {
     username,
     turn: roomData.turn,
