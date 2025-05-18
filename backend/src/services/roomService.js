@@ -47,8 +47,8 @@ const createRoom = async (
     hints,
     isJoin: true,
     scores: {
-    [username]: 0,
-  },
+      [username]: 0,
+    },
     existingPlayers: [player],
     isPlaying: false,
     createdAt: Date.now(),
@@ -85,17 +85,21 @@ const joinRoom = async ({ username, roomId }, socket, io) => {
     await player.save();
   }
   if (!roomId) {
+    let availableRooms = [];
     const keys = await redis.keys("room:*");
     for (const key of keys) {
       const roomData = JSON.parse(await redis.get(key));
       if (roomData.isJoin) {
-        roomId = roomData.roomId;
-        break;
+        availableRooms.push(roomData.roomId);
       }
     }
+    if (availableRooms.length === 0)
+      return socket.emit("noRoomAvailable", { message: "All rooms are full" });
+    else {
+      roomId =
+        availableRooms[Math.floor(Math.random() * availableRooms.length)];
+    }
   }
-  if (!roomId)
-    return socket.emit("noRoomAvailable", { message: "All rooms are full" });
   const roomKey = `room:${roomId}`;
   let roomData = await redis.get(roomKey);
   if (!roomData)
@@ -159,6 +163,5 @@ const getRoomData = async ({ username, roomId }, socket) => {
     }
   }
 };
-
 
 export default { createRoom, joinRoom, getRoomData };
