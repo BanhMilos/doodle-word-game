@@ -98,7 +98,6 @@ export default function Lobby() {
         { username: name, avatar: avatars[avatarIndex], socketID: socket.id },
         { withCredentials: true }
       );
-      setUser({isHost: true});
       navigate("/game");
     } catch (error) {
       console.log(error);
