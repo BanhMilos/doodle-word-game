@@ -6,6 +6,7 @@ import AppImages from "core/constants/AppImages";
 import DrawingBoard from "components/DrawingBoard";
 import LoadingSpinner from "components/LoadingIndicator";
 import WordSelect from "components/WordSelect";
+import { useLocation, useNavigate } from "react-router-dom";
 
 export default function Game() {
   const [loading, setLoading] = useState(true);
@@ -21,6 +22,11 @@ export default function Game() {
   const [isGameStart, setIsGameStart] = useState(false);
   const [disableTool, setDisableTool] = useState(true);
   const [copied, setCopied] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const from = location.state?.from;
+
   const [settings, setSettings] = useState({
     roomName: "",
     players: 8,
@@ -47,24 +53,43 @@ export default function Game() {
     }
   };
 
-  const handleCreateRoom = () => {
-    setLoading(true);
+  const handleUpdateRoom = async () => {
+    if (currentRoomId) {
+      socket.emit("updateRoom", {
+        roomId: currentRoomId,
+        username: playerName,
+        roomName: settings.roomName,
+        occupancy: settings.players,
+        maxRound: settings.rounds,
+        turnsPerRound: settings.turns,
+        wordsCount: settings.wordCount,
+        drawTime: settings.drawTime,
+        hints: settings.hints,
+      });
+    }
+    console.log(`LOG : handleUpdateRoom ${currentRoomId}`);
+  };
 
+  const settingsRef = useRef(settings);
+  useEffect(() => {
+    settingsRef.current = settings;
+  }, [settings]);
+
+  const handleCreateRoom = useCallback(() => {
+    console.log("LOG : handleCreateRoom");
+    setLoading(true);
     socket.emit("createRoom", {
       username: playerName,
-      roomName: settings.roomName,
-      occupancy: settings.players,
-      maxRound: settings.rounds,
-      turnsPerRound: settings.turns,
-      wordsCount: settings.wordCount,
-      drawTime: settings.drawTime,
-      hints: settings.hints,
+      roomName: settingsRef.current.roomName,
+      occupancy: settingsRef.current.players,
+      maxRound: settingsRef.current.rounds,
+      turnsPerRound: settingsRef.current.turns,
+      wordsCount: settingsRef.current.wordCount,
+      drawTime: settingsRef.current.drawTime,
+      hints: settingsRef.current.hints,
     });
-
-    setTimeout(() => {
-      setLoading(false);
-    }, 1000);
-  };
+    setTimeout(() => setLoading(false), 1000);
+  }, [playerName]);
 
   const handleStartGame = () => {
     console.log("LOG : handleStartGame");
@@ -87,6 +112,23 @@ export default function Game() {
   };
 
   useEffect(() => {
+    if (!playerName) {
+      navigate("/");
+    }
+  }, [playerName, navigate]);
+
+  useEffect(() => {
+    console.log(`LOG : useEffect createRoom ${from}`);
+    if (from === "createRoom") handleCreateRoom();
+  }, [from, handleCreateRoom]);
+
+  useEffect(() => {
+    console.log(`LOG : useEffect play ${from} ${playerName}`);
+    if (from === "play") socket.emit("getRoomData", { username: playerName });
+  }, [from, playerName]);
+
+  useEffect(() => {
+    console.log("LOG : useEffect socket");
     socket.on("approveJoin", (data) => {
       setCurrentRoomId(data.roomId);
       setPlayers((prev) => [
@@ -101,7 +143,7 @@ export default function Game() {
       console.log(`LOG ; approve player : ${players.length} ${data.username}`);
     });
 
-    const handleGetRoomData = (data) => {
+    socket.on("getRoomData", (data) => {
       setCurrentRoomId(data.roomId);
       setPlayers(
         data.existingPlayers.map((player) => ({
@@ -112,19 +154,18 @@ export default function Game() {
         }))
       );
       console.log(`LOG : getRoomData called ${JSON.stringify(data)}`);
-      console.log(`LOG : getRoomData players ${data.existingPlayers.length} ${players.length}`);
+      console.log(
+        `LOG : getRoomData players ${data.existingPlayers.length} ${players.length}`
+      );
       setLoading(false);
-    };
+    });
 
-    socket.on("getRoomData", handleGetRoomData);
     socket.on("chatMessage", (data) => setMessages((prev) => [...prev, data]));
+
     socket.on("startTurn", (data) => {
       setIsGameStart(true);
       handleSettingChange("drawingPlayer", data.username);
       setDisableTool(playerName !== data.username);
-      console.log(`LOG : ${data.username} ${playerName}`);
-      console.log(`LOG : ${data.username === playerName}`);
-      console.log(`LOG : disableTool ${disableTool}`);
       setMessages((prev) => [
         ...prev,
         {
@@ -133,27 +174,26 @@ export default function Game() {
         },
       ]);
       setCanChat(true);
-      if (data.username === playerName)
+      if (data.username === playerName) {
         socket.emit("chooseWord", {
           username: playerName,
           wordsCount: settings.wordCount,
           roomId: currentRoomId,
         });
+      }
     });
+
     socket.on("chooseWord", (data) => {
       if (data.username === playerName) {
         handleSettingChange("words", data.words);
         setIsChooseWord(true);
       }
-      console.log(`LOG : chooseWord ${JSON.stringify(data)}`);
       setMessages((prev) => [
         ...prev,
-        {
-          username: "System",
-          message: `${data.username} are choosing words`,
-        },
+        { username: "System", message: `${data.username} is choosing a word` },
       ]);
     });
+
     socket.on("startGuessing", (data) => {
       console.log(
         `LOG : startGuessing ${playerName} ${data.username} ${data.word}`
@@ -167,59 +207,55 @@ export default function Game() {
         },
       ]);
     });
-    socket.on("drawTime", (data) => {
-      setTimer(data.drawTime);
-    });
+
+    socket.on("drawTime", (data) => setTimer(data.drawTime));
+
     socket.on("guessingTimeOver", (data) => {
       setMessages((prev) => [
         ...prev,
         {
           username: "System",
-          message: `Guessing time over, the word was ${data.word}`,
+          message: `Guessing time over. The word was: ${data.word}`,
         },
       ]);
     });
+
     socket.on("guessedCorrectly", (data) => {
-      console.log(`LOG : guessedCorrectly ${JSON.stringify(data)}`);
-      setPlayers((prevPlayers) =>
-        prevPlayers.map((player) =>
+      setPlayers((prev) =>
+        prev.map((player) =>
           player.username === data.username
             ? { ...player, score: data.score }
             : player
         )
       );
     });
-    socket.on("gameOver", (data) => {
+
+    socket.on("gameOver", () => {
       handleSettingChange("words", []);
       handleSettingChange("guessingWord", "");
       handleSettingChange("drawingPlayer", "");
       setMessages((prev) => [
         ...prev,
-        {
-          username: "System",
-          message: `Game over!!!!!!!!!`,
-        },
+        { username: "System", message: `Game over!` },
       ]);
     });
+
     socket.on("leaderboard", (data) => {
-      console.log(JSON.stringify(data));
+      const leaderboard = data
+        ? "\ud83c\udfc6 Leaderboard:\n" +
+          Object.entries(data)
+            .sort((a, b) => b[1] - a[1])
+            .map((entry, i) => `${i + 1}. ${entry[0]}: ${entry[1]}`)
+            .join("\n")
+        : "\ud83c\udfc6 Leaderboard has no data.";
       setMessages((prev) => [
         ...prev,
-        {
-          username: "System",
-          message: data
-            ? "🏆 Leaderboard:\n" +
-              Object.entries(data)
-                .sort((a, b) => b[1] - a[1])
-                .map(
-                  ([username, score], index) =>
-                    `${index + 1}. ${username}: ${score}`
-                )
-                .join("\n")
-            : "🏆 Leaderboard chưa có dữ liệu.",
-        },
+        { username: "System", message: leaderboard },
       ]);
     });
+
+    //socket.emit("getRoomData", { username: playerName });
+
     return () => {
       socket.off("approveJoin");
       socket.off("chatMessage");
@@ -229,6 +265,7 @@ export default function Game() {
       socket.off("startGuessing");
       socket.off("drawTime");
       socket.off("guessingTimeOver");
+      socket.off("guessedCorrectly");
       socket.off("gameOver");
       socket.off("leaderboard");
     };
@@ -237,9 +274,27 @@ export default function Game() {
     disableTool,
     handleSettingChange,
     playerName,
-    players.length,
     settings.wordCount,
+    players.length,
   ]);
+
+  const playerNameRef = useRef(playerName);
+  const roomIdRef = useRef(currentRoomId);
+
+  useEffect(() => {
+    playerNameRef.current = playerName;
+    roomIdRef.current = currentRoomId;
+  }, [playerName, currentRoomId]);
+
+  useEffect(() => {
+    return () => {
+      console.log(`leave room ${playerNameRef.current} ${roomIdRef.current}`);
+      socket.emit(`leaveRoom`, {
+        username: playerNameRef.current,
+        roomId: roomIdRef.current,
+      });
+    };
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -483,10 +538,14 @@ export default function Game() {
                 </div>
               </div>
               <div className="settings-buttons">
-                <button onClick={handleCreateRoom}>Create</button>
+                <button onClick={handleUpdateRoom} disabled={
+                    players.length < 1 || playerName !== players[0].username
+                  }>Update</button>
                 <button
                   onClick={handleStartGame}
-                  disabled={players.length < 2 || playerName !== players[0].username}
+                  disabled={
+                    players.length < 2 || playerName !== players[0].username
+                  }
                 >
                   Start
                 </button>

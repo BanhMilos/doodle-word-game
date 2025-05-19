@@ -35,9 +35,10 @@ const drawing = async (data, io) => {
   }
 };
 
-const guessedCorrectly = async (data, io) => {
+const guessedCorrectly = async (data, socket, io) => {
+  console.log(`guessedCorrectly called controller ${JSON.stringify(data)}`);
   try {
-    gameService.guessedCorrectly(data, io);
+    gameService.guessedCorrectly(data, socket, io);
   } catch (error) {
     console.log(error);
     io.to(data.roomId).emit("error", { message: error.message });

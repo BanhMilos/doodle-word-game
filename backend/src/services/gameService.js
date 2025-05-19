@@ -114,7 +114,8 @@ const drawing = async ({ roomId, username, drawingData }, io) => {
   }
 };
 
-const guessedCorrectly = async ({ username, roomId, message, timer }, io) => {
+const guessedCorrectly = async ({ username, roomId, message, timer }, socket, io) => {
+  console.log(`guessedCorrectly called service ${username} ${roomId}`);
   let roomData = await redis.get(`room:${roomId}`);
   roomData = JSON.parse(roomData);
 
