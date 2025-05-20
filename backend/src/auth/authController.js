@@ -15,6 +15,7 @@ const register = async (req, res) => {
       password: hashed,
       email,
     });
+    const newPlayer = await Player.create({username:"player"+newUser._id, avatar: "😠", userId: newUser._id });
     return res.status(200).json({ message: "User created successfully" });
   } catch (error) {
     console.log(error);
