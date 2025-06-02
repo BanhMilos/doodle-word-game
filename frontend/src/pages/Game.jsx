@@ -36,7 +36,7 @@ export default function Game() {
     drawTime: 60,
     rounds: 1,
     turns: 3,
-    wordCount: 3,
+    wordsCount: 3,
     hints: 2,
     words: [],
     guessingWord: "",
@@ -65,7 +65,7 @@ export default function Game() {
         occupancy: settings.players,
         maxRound: settings.rounds,
         turnsPerRound: settings.turns,
-        wordsCount: settings.wordCount,
+        wordsCount: settings.wordsCount,
         drawTime: settings.drawTime,
         hints: settings.hints,
       });
@@ -87,7 +87,7 @@ export default function Game() {
       occupancy: settingsRef.current.players,
       maxRound: settingsRef.current.rounds,
       turnsPerRound: settingsRef.current.turns,
-      wordsCount: settingsRef.current.wordCount,
+      wordsCount: settingsRef.current.wordsCount,
       drawTime: settingsRef.current.drawTime,
       hints: settingsRef.current.hints,
     });
@@ -148,6 +148,7 @@ export default function Game() {
 
     socket.on("getRoomData", (data) => {
       setCurrentRoomId(data.roomId);
+
       setPlayers(
         data.existingPlayers.map((player) => ({
           id: player.username,
@@ -156,10 +157,27 @@ export default function Game() {
           score: player.score,
         }))
       );
+
+      setSettings((prev) => ({
+        ...prev,
+        roomName: data.roomName ?? prev.roomName,
+        players: data.maxPlayers ?? prev.players,
+        language: data.language ?? prev.language,
+        drawTime: data.drawTime ?? prev.drawTime,
+        rounds: data.maxRound ?? prev.rounds,
+        turns: data.turns ?? prev.turns,
+        wordsCount: data.wordsCount ?? prev.wordsCount,
+        hints: data.hints ?? prev.hints,
+        words: data.words ?? prev.words,
+        guessingWord: data.guessingWord ?? prev.guessingWord,
+        drawingPlayer: data.drawingPlayer ?? prev.drawingPlayer,
+      }));
+
       console.log(`LOG : getRoomData called ${JSON.stringify(data)}`);
       console.log(
         `LOG : getRoomData players ${data.existingPlayers.length} ${players.length}`
       );
+
       setLoading(false);
     });
 
@@ -181,7 +199,7 @@ export default function Game() {
       if (data.username === playerName) {
         socket.emit("chooseWord", {
           username: playerName,
-          wordsCount: settings.wordCount,
+          wordsCount: settings.wordsCount,
           roomId: currentRoomId,
         });
       }
@@ -282,7 +300,7 @@ export default function Game() {
     disableTool,
     handleSettingChange,
     playerName,
-    settings.wordCount,
+    settings.wordsCount,
     players.length,
   ]);
 
@@ -352,7 +370,7 @@ export default function Game() {
             <h2>Game Over</h2>
             <p>Leaderboard</p>
             <div className="leaderboard">
-              {players
+              {[...players]
                 .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
                 .map((p, index) => (
                   <div
@@ -560,9 +578,9 @@ export default function Game() {
                 </div>
                 <div className="value">
                   <select
-                    value={settings.wordCount}
+                    value={settings.wordsCount}
                     onChange={(e) =>
-                      handleSettingChange("wordCount", parseInt(e.target.value))
+                      handleSettingChange("wordsCount", parseInt(e.target.value))
                     }
                   >
                     {[1, 2, 3, 4].map((count) => (

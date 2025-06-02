@@ -195,7 +195,7 @@ const updateRoom = async (
     username: "System",
   });
 
-  console.log(`LOG : updateRoom called ${roomData.maxRound}`);
+  console.log(`LOG : updateRoom called ${roomData.maxRound} ${roomData.wordsCount}`);
 };
 
 const leaveRoom = async ({ username, roomId }, io) => {
