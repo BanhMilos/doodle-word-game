@@ -241,7 +241,10 @@ export default function Game() {
         ...prev,
         { username: "System", message: `Game over!` },
       ]);
+      setIsGameStart(false);
       setShowGameOverDialog(true);
+      socket.off("drawTime");
+      setTimer(0);
     });
 
     socket.on("leaderboard", (data) => {

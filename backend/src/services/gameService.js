@@ -8,7 +8,13 @@ const startTurn = async ({ roomId }, io) => {
   let roomData = await redis.get(`room:${roomId}`);
   roomData = JSON.parse(roomData);
   roomData.isPlaying = true;
-  if (roomData.turn === roomData.turnsPerRound) {
+  const playerCount = roomData?.players?.length ?? 3;
+
+  if (roomData.round > roomData.maxRound) {
+    roomData.round = 1;
+  }
+
+  if (roomData.turn === playerCount) {
     roomData.round += 1;
     roomData.turn = 0;
   }
@@ -60,12 +66,14 @@ const startGuessing = async ({ roomId, word, username, drawTime }, io) => {
   let roomData = await redis.get(`room:${roomId}`);
   roomData = JSON.parse(roomData);
   roomData.drawTime = drawTime;
-  
+
   roomData.currentWord = word;
   await redis.set(`room:${roomId}`, JSON.stringify(roomData));
-  
-  console.log(`LOG : startGuessing run ${roomId} ${word} ${username} ${drawTime}`);
-  io.to(roomId).emit("startGuessing", { username, word});
+
+  console.log(
+    `LOG : startGuessing run ${roomId} ${word} ${username} ${drawTime}`
+  );
+  io.to(roomId).emit("startGuessing", { username, word });
   const waitForDrawTime = new Promise((resolve) => {
     const interval = setInterval(async () => {
       drawTime -= 1;
@@ -73,17 +81,14 @@ const startGuessing = async ({ roomId, word, username, drawTime }, io) => {
       if (drawTime === 0) {
         clearInterval(interval);
         io.to(roomId).emit("guessingTimeOver", { word });
-        resolve(); 
+        resolve();
       }
     }, 1000);
   });
 
   await waitForDrawTime;
-
-  if (
-    roomData.turn === roomData.turnsPerRound &&
-    roomData.round === roomData.maxRound
-  ) {
+  const playerCount = roomData?.players?.length ?? 3;
+  if (roomData.turn === playerCount && roomData.round === roomData.maxRound) {
     io.to(roomId).emit("gameOver", { message: "Game Over" });
   } else {
     await startTurn({ roomId }, io);
@@ -114,7 +119,11 @@ const drawing = async ({ roomId, username, drawingData }, io) => {
   }
 };
 
-const guessedCorrectly = async ({ username, roomId, message, timer }, socket, io) => {
+const guessedCorrectly = async (
+  { username, roomId, message, timer },
+  socket,
+  io
+) => {
   console.log(`guessedCorrectly called service ${username} ${roomId}`);
   let roomData = await redis.get(`room:${roomId}`);
   roomData = JSON.parse(roomData);
@@ -128,7 +137,7 @@ const guessedCorrectly = async ({ username, roomId, message, timer }, socket, io
       roomData.guessedCorrectlyPeople.push(username);
 
       //tính điểm
-      const drawTime = roomData.drawTime || 60; 
+      const drawTime = roomData.drawTime || 60;
       let score = Math.round((timer / drawTime) * 1000);
 
       if (!roomData.scores[username]) roomData.scores[username] = 0;
@@ -140,19 +149,27 @@ const guessedCorrectly = async ({ username, roomId, message, timer }, socket, io
 
       const totalGuessers = roomData.players.length - 1; // trừ người vẽ
       if (roomData.guessedCorrectlyPeople.length === totalGuessers) {
-        console.log(`✅ All players guessed correctly in room ${roomId}. Ending turn.`);
+        console.log(
+          `✅ All players guessed correctly in room ${roomId}. Ending turn.`
+        );
 
         io.to(roomId).emit("allGuessedCorrectly", {
           message: "All players guessed correctly!",
-          word: roomData.currentWord
+          word: roomData.currentWord,
         });
-
-        await startTurn({ roomId }, io);
+        const playerCount = roomData?.players?.length ?? 3;
+        if (
+          roomData.turn === playerCount &&
+          roomData.round === roomData.maxRound
+        ) {
+          io.to(roomId).emit("gameOver", { message: "Game Over" });
+        } else {
+          await startTurn({ roomId }, io);
+        }
       }
     }
   }
 };
-
 
 const endTurn = async ({ roomId, username, score }, io) => {
   let roomData = await redis.get(`room:${roomId}`);
@@ -183,7 +200,6 @@ const gameOver = async ({ roomId, username, score }, io) => {
     await room.save();
     await redis.del(`room:${roomId}`);
   } else {
-
     if (!roomData.scores[username]) roomData.scores[username] = 0;
     roomData.scores[username] += score;
     const sortedScores = Object.entries(roomData.scores)
