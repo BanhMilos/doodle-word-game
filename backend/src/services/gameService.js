@@ -137,6 +137,18 @@ const guessedCorrectly = async ({ username, roomId, message, timer }, socket, io
 
       await redis.set(`room:${roomId}`, JSON.stringify(roomData));
       io.to(roomId).emit("guessedCorrectly", { username, score });
+
+      const totalGuessers = roomData.players.length - 1; // trừ người vẽ
+      if (roomData.guessedCorrectlyPeople.length === totalGuessers) {
+        console.log(`✅ All players guessed correctly in room ${roomId}. Ending turn.`);
+
+        io.to(roomId).emit("allGuessedCorrectly", {
+          message: "All players guessed correctly!",
+          word: roomData.currentWord
+        });
+
+        await startTurn({ roomId }, io);
+      }
     }
   }
 };
@@ -158,12 +170,9 @@ const gameOver = async ({ roomId, username, score }, io) => {
   player.totalGames += 1;
   player.highestScore = Math.max(player.highestScore, score);
   await player.save();
-
   let roomData = await redis.get(`room:${roomId}`);
   roomData = JSON.parse(roomData);
-
   roomData.players = roomData.players.filter((p) => p.username !== username);
-
   if (roomData.players.length === 0) {
     const room = await Room.findOne({ roomId });
     room.occupancy = roomData.occupancy;
@@ -174,9 +183,20 @@ const gameOver = async ({ roomId, username, score }, io) => {
     await room.save();
     await redis.del(`room:${roomId}`);
   } else {
+
+    if (!roomData.scores[username]) roomData.scores[username] = 0;
     roomData.scores[username] += score;
+    const sortedScores = Object.entries(roomData.scores)
+      .sort((a, b) => b[1] - a[1])
+      .map(([username, score]) => ({ username, score }));
+
+    console.log(`📊 Leaderboard for room ${roomId}:`);
+    sortedScores.forEach((entry, index) => {
+      console.log(`${index + 1}. ${entry.username}: ${entry.score}`);
+    });
+
     await redis.set(`room:${roomId}`, JSON.stringify(roomData));
-    io.to(roomId).emit("leaderboard", { scores: roomData.scores });
+    io.to(roomId).emit("leaderboard", { scores: sortedScores });
   }
 };
 
