@@ -188,6 +188,14 @@ const handlePlayerLeave = async ({ roomId, username }, io) => {
 
   roomData.players = roomData.players.filter((p) => p !== username);
 
+  if (roomData.players.length === 1) {
+    await redis.del(`room:${roomId}`);
+    io.to(roomId).emit("gameOver", {
+      message: `Game ended.`,
+    });
+    return;
+  }
+
   if (roomData.drawingPlayer === username) {
     roomData.guessedCorrectlyPeople = [];
     roomData.drawingPlayer = "";
