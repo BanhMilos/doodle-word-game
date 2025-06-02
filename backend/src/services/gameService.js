@@ -7,7 +7,6 @@ const startTurn = async ({ roomId }, io) => {
   console.log(`LOG : startTurn run ${roomId}`);
   let roomData = await redis.get(`room:${roomId}`);
   roomData = JSON.parse(roomData);
-  roomData.isPlaying = true;
   const playerCount = roomData?.players?.length ?? 3;
 
   if (roomData.round > roomData.maxRound) {

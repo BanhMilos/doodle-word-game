@@ -44,6 +44,7 @@ export default function Game() {
   });
 
   const handleSettingChange = useCallback((key, value) => {
+    console.log(`LOG : handleSettingChange ${key} ${value}`);
     setSettings((prev) => ({ ...prev, [key]: value }));
   }, []);
 
