@@ -4,10 +4,10 @@ import Player from "../models/playerModel.js";
 import Room from "../models/roomModel.js";
 
 const startTurn = async ({ roomId }, io) => {
-  console.log(`LOG : startTurn run ${roomId}`);
   let roomData = await redis.get(`room:${roomId}`);
   roomData = JSON.parse(roomData);
   const playerCount = roomData?.players?.length ?? 3;
+  console.log(`LOG : startTurn run ${roomId} ${roomData.maxRound}`);
 
   if (roomData.round > roomData.maxRound) {
     roomData.round = 1;
@@ -88,6 +88,7 @@ const startGuessing = async ({ roomId, word, username, drawTime }, io) => {
   await waitForDrawTime;
   const playerCount = roomData?.players?.length ?? 3;
   if (roomData.turn === playerCount && roomData.round === roomData.maxRound) {
+      console.log(`LOG : gameOver ${roomData.round} ${roomData.maxRound}`);
     io.to(roomId).emit("gameOver", { message: "Game Over" });
   } else {
     await startTurn({ roomId }, io);
@@ -161,7 +162,9 @@ const guessedCorrectly = async (
           roomData.turn === playerCount &&
           roomData.round === roomData.maxRound
         ) {
+            console.log(`LOG : gameOver ${roomData.round} ${roomData.maxRound}`);
           io.to(roomId).emit("gameOver", { message: "Game Over" });
+          
         } else {
           await startTurn({ roomId }, io);
         }

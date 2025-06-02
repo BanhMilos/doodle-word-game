@@ -176,6 +176,7 @@ const updateRoom = async (
 ) => {
   let roomData = await redis.get(`room:${roomId}`);
   roomData = JSON.parse(roomData);
+
   roomData = {
     ...roomData,
     occupancy,
@@ -185,12 +186,16 @@ const updateRoom = async (
     drawTime,
     hints,
   };
+
+  await redis.set(`room:${roomId}`, JSON.stringify(roomData));
+
   io.to(roomId).emit("getRoomData", roomData);
-  io.to(roomData.roomId).emit("chatMessage", {
+  io.to(roomId).emit("chatMessage", {
     message: `Room setting updated`,
     username: "System",
   });
-  console.log("updateRoom called");
+
+  console.log(`LOG : updateRoom called ${roomData.maxRound}`);
 };
 
 const leaveRoom = async ({ username, roomId }, io) => {
