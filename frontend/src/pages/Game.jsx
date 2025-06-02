@@ -22,6 +22,8 @@ export default function Game() {
   const [isGameStart, setIsGameStart] = useState(false);
   const [disableTool, setDisableTool] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [showGameOverDialog, setShowGameOverDialog] = useState(false);
+  const [round, setRound] = useState(1);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -76,7 +78,7 @@ export default function Game() {
   }, [settings]);
 
   const handleCreateRoom = useCallback(() => {
-    console.log("LOG : handleCreateRoom");
+    console.log(`LOG : handleCreateRoom ${playerName}`);
     setLoading(true);
     socket.emit("createRoom", {
       username: playerName,
@@ -173,6 +175,7 @@ export default function Game() {
           message: `Round ${data.round} turn ${data.turn} started`,
         },
       ]);
+      setRound(data.round);
       setCanChat(true);
       if (data.username === playerName) {
         socket.emit("chooseWord", {
@@ -238,6 +241,7 @@ export default function Game() {
         ...prev,
         { username: "System", message: `Game over!` },
       ]);
+      setShowGameOverDialog(true);
     });
 
     socket.on("leaderboard", (data) => {
@@ -326,13 +330,47 @@ export default function Game() {
 
   return (
     <div id="game-room">
-      {loading && <LoadingSpinner />}
       {isChooseWord && (
         <WordSelect
           data={settings.words}
           onSelect={(word) => handleChooseWord(word)}
         />
       )}
+      {showGameOverDialog && (
+        <div id="overlay">
+          <div id="dialog">
+            <button
+              id="close-button"
+              onClick={() => setShowGameOverDialog(false)}
+            >
+              ×
+            </button>
+            <h2>Game Over</h2>
+            <p>Leaderboard</p>
+            <div className="leaderboard">
+              {players
+                .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+                .map((p, index) => (
+                  <div
+                    key={p.id}
+                    className={`player ${
+                      p.username === playerName ? "current-player" : ""
+                    }`}
+                  >
+                    <span className="player-rank">#{index + 1}</span>
+                    <span className="player-avatar">{p.avatar}</span>
+                    <span className="player-name">
+                      {p.username}
+                      {p.username === playerName && " (You)"}
+                    </span>
+                    <span className="player-score">{p.score ?? 0}</span>
+                  </div>
+                ))}
+            </div>
+          </div>
+        </div>
+      )}
+      {loading && <LoadingSpinner />}
       <div id="game-wrapper">
         <div id="game-logo">
           <img src={AppImages.Logo} alt="Logo" />
@@ -343,7 +381,9 @@ export default function Game() {
             <span className="timer">{timer}</span>
           </div>
           <div id="game-round">
-            <div className="text">Round 1 of 3</div>
+            <div className="text">
+              Round {round} of {settings.rounds}
+            </div>
           </div>
           <div id="game-word">
             <div className="description">
@@ -380,16 +420,16 @@ export default function Game() {
         <div id="game-chat-input-mobile">
           <div className="chat-form">
             <input
-            className="chat-input-mobile"
-            value={msg}
-            onChange={(e) => setMsg(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.nativeEvent.isComposing) {
-                sendMessage();
-              }
-            }}
-            placeholder="Type your guess..."
-          />
+              className="chat-input-mobile"
+              value={msg}
+              onChange={(e) => setMsg(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                  sendMessage();
+                }
+              }}
+              placeholder="Type your guess..."
+            />
           </div>
         </div>
         <div id="game-canvas">
@@ -548,9 +588,14 @@ export default function Game() {
                 </div>
               </div>
               <div className="settings-buttons">
-                <button onClick={handleUpdateRoom} disabled={
+                <button
+                  onClick={handleUpdateRoom}
+                  disabled={
                     players.length < 1 || playerName !== players[0].username
-                  }>Update</button>
+                  }
+                >
+                  Update
+                </button>
                 <button
                   onClick={handleStartGame}
                   disabled={
