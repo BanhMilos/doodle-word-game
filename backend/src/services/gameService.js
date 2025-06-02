@@ -3,6 +3,8 @@ import redis from "../config/redis.js";
 import Player from "../models/playerModel.js";
 import Room from "../models/roomModel.js";
 
+const intervalMap = new Map();
+
 const startTurn = async ({ roomId }, io) => {
   let roomData = await redis.get(`room:${roomId}`);
   roomData = JSON.parse(roomData);
@@ -73,22 +75,31 @@ const startGuessing = async ({ roomId, word, username, drawTime }, io) => {
     `LOG : startGuessing run ${roomId} ${word} ${username} ${drawTime}`
   );
   io.to(roomId).emit("startGuessing", { username, word });
-  const waitForDrawTime = new Promise((resolve) => {
+
+  if (intervalMap.has(roomId)) {        //xoá interval cũ 
+    clearInterval(intervalMap.get(roomId));
+    intervalMap.delete(roomId);
+  }
+
+  const waitForDrawTime = new Promise((resolve) => {      //tạo interval mới
     const interval = setInterval(async () => {
       drawTime -= 1;
       io.to(roomId).emit("drawTime", { drawTime });
       if (drawTime === 0) {
         clearInterval(interval);
+        intervalMap.delete(roomId); // cleanup
         io.to(roomId).emit("guessingTimeOver", { word });
         resolve();
       }
     }, 1000);
+
+    intervalMap.set(roomId, interval); // lưu interval mới
   });
 
   await waitForDrawTime;
+
   const playerCount = roomData?.players?.length ?? 3;
   if (roomData.turn === playerCount && roomData.round === roomData.maxRound) {
-      console.log(`LOG : gameOver ${roomData.round} ${roomData.maxRound}`);
     io.to(roomId).emit("gameOver", { message: "Game Over" });
   } else {
     await startTurn({ roomId }, io);
