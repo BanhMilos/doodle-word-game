@@ -3,7 +3,7 @@ import useStore from "../store";
 import "../styles/lobby.css";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import socket from "../utils/socket";
+import socket, { connectSocket, onConnect } from "../utils/socket";
 import useAxiosAuth from "../hooks/useAxiosAuth";
 import AppImages from "core/constants/AppImages";
 import HowToPlay from "components/HowToPlay";
@@ -50,6 +50,7 @@ useEffect(() => {
 
   if (!user) {
     navigate("/login");
+    return;
   }
 
   fetchData();
@@ -61,7 +62,8 @@ useEffect(() => {
   const noRoomAvailable = ({ message }) => {
     alert(message);
   };
-
+  
+  connectSocket();
   socket.on("connect", onConnect);
   socket.on("noRoomAvailable", noRoomAvailable);
   socket.once("approveJoin", handleApproveJoin);

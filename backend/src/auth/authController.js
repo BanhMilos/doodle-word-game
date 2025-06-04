@@ -1,3 +1,4 @@
+import Player from "../models/playerModel.js";
 import User from "../models/userModel.js";
 import { createAccessToken, createRefreshToken } from "../utils/token.js";
 import bcrypt from "bcrypt";

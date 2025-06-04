@@ -195,7 +195,9 @@ const updateRoom = async (
     username: "System",
   });
 
-  console.log(`LOG : updateRoom called ${roomData.maxRound} ${roomData.wordsCount}`);
+  console.log(
+    `LOG : updateRoom called ${roomData.maxRound} ${roomData.wordsCount}`
+  );
 };
 
 const leaveRoom = async ({ username, roomId }, io) => {
@@ -234,11 +236,29 @@ const leaveRoom = async ({ username, roomId }, io) => {
     message: `${username} left the room`,
   });
 
-  const player = await Player.findOne({ username });
+  const player = await Player.findOne({ _id: playerId });
   if (player) {
     player.totalGames += 1;
     player.highestScore = Math.max(player.highestScore, score || 0);
     await player.save();
+  }
+
+  if (roomData.players.length === 0) {
+    await Room.updateOne(
+      { roomId: roomData.roomId }, // 1. Filter: tìm document theo roomId
+      {
+        $set: {
+          // 2. Update: các trường muốn sửa
+          occupancy: roomData.occupancy,
+          maxRound: roomData.maxRound,
+          turnsPerRound: roomData.turnsPerRound,
+          wordsCount: roomData.wordsCount,
+          drawTime: roomData.drawTime,
+        },
+      }
+    );
+    await redis.del(`room:${roomId}`);
+    console.log(`🗑️ Room ${roomData.roomId} empty — archived & deleted`);
   }
 
   io.to(roomData.roomId).emit("getRoomData", roomData);

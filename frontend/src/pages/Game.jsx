@@ -43,6 +43,7 @@ export default function Game() {
     drawingPlayer: "",
   });
 
+
   const handleSettingChange = useCallback((key, value) => {
     console.log(`LOG : handleSettingChange ${key} ${value}`);
     setSettings((prev) => ({ ...prev, [key]: value }));
@@ -580,7 +581,10 @@ export default function Game() {
                   <select
                     value={settings.wordsCount}
                     onChange={(e) =>
-                      handleSettingChange("wordsCount", parseInt(e.target.value))
+                      handleSettingChange(
+                        "wordsCount",
+                        parseInt(e.target.value)
+                      )
                     }
                   >
                     {[1, 2, 3, 4].map((count) => (
